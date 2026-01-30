@@ -58,9 +58,9 @@ class Player:
         self.rect = pygame.Rect(x, y, self.size, self.size)
 
         self.masks = {
-            "theyyam": {"speed": 300, "color": (50, 200, 255)},
-            "bhairava": {"speed": 450, "color": (50, 255, 100)},
-            "kali": {"speed": 180, "color": (200, 50, 50)},
+            "theyyam": {"speed": 200, "color": (50, 200, 255)},
+            "bhairava": {"speed": 200, "color": (50, 255, 100)},
+            "kali": {"speed": 200, "color": (200, 50, 50)},
         }
 
         self.current_mask = "theyyam"
@@ -76,6 +76,21 @@ class Player:
         self.fireball_timer = 0.0
 
         self.facing = 1  # 1 = right, -1 = left
+
+        #Sword
+        self.sword_img = pygame.image.load("assets/sword.png").convert_alpha()
+        self.sword_img = pygame.transform.scale(
+            self.sword_img,
+            (self.sword_img.get_width() * 3,
+            self.sword_img.get_height() * 3)
+        )
+        self.sword_angle = 0
+        self.sword_swinging = False
+        self.sword_timer = 0
+        self.sword_duration = 12   # frames (~0.2s at 60 FPS)
+
+        
+
 
     # -----------------
     # MASK
@@ -141,6 +156,17 @@ class Player:
         self.fireballs = [
             f for f in self.fireballs if not f.is_dead(800)
         ]
+        if self.sword_swinging:
+            self.sword_timer -= 1
+            if self.facing == 1:
+                self.sword_angle -= 6   # clockwise
+            else:
+                self.sword_angle += 6  # counter-clockwise
+
+        if self.sword_timer <= 0:
+            self.sword_swinging = False
+            self.sword_angle = 0
+
 
     # -----------------
     # DRAW
@@ -150,3 +176,22 @@ class Player:
 
         for fireball in self.fireballs:
             fireball.draw(screen)
+        if self.current_mask == "kali" and self.sword_swinging:
+
+            sword_img = self.sword_img
+
+            if self.facing == -1:
+                sword_img = pygame.transform.flip(sword_img, True, False)
+
+            rotated_sword = pygame.transform.rotate(sword_img, self.sword_angle)
+
+            offset_x = 20 if self.facing == 1 else -20
+
+            sword_rect = rotated_sword.get_rect(
+                center=(self.rect.centerx + offset_x, self.rect.centery)
+            )
+
+            screen.blit(rotated_sword, sword_rect)
+
+
+
