@@ -15,7 +15,7 @@ SKIN = (255, 180, 130)
 BEARD_BROWN = (60, 30, 10)
 SHIRT_DARK = (40, 40, 40)
 PANTS_BROWN = (100, 50, 20)
-EYE_BLUE = (0, 100, 255)
+EYE_BLUE = (10, 10, 10)
 BOOT_COLOR = (45, 30, 20)
 DUST_COLOR = (200, 200, 200)
 GOLD, RED, BLUE, YELLOW = (218, 165, 32), (200, 0, 0), (30, 60, 180), (255, 215, 0)
@@ -76,8 +76,8 @@ class Player:
         if view == "FRONT":
             pygame.draw.circle(surface, base_c, (mx, my), 28, draw_top_left=True, draw_top_right=True)
             pygame.draw.rect(surface, face_c, (mx - 15, my - 12, 30, 35), border_radius=2)
-            pygame.draw.circle(surface, (255,255,255), (mx - 7, my + 2), 4)
-            pygame.draw.circle(surface, (255,255,255), (mx + 7, my + 2), 4)
+            pygame.draw.circle(surface, (10, 10, 10), (mx - 7, my + 2), 4)
+            pygame.draw.circle(surface, (10, 10, 10), (mx + 7, my + 2), 4)
         elif view == "BACK":
             # Crown visible from back
             pygame.draw.circle(surface, base_c, (mx, my), 24, draw_top_left=True, draw_top_right=True)
@@ -88,7 +88,7 @@ class Player:
             pygame.draw.rect(surface, base_c, (mx + (10 if is_right else -14), my - 20, 4, 15), border_radius=1)
             pygame.draw.rect(surface, face_c, (side_x, my - 12, 10, 32), border_radius=2)
             eye_x = mx + 6 if is_right else mx - 8
-            pygame.draw.circle(surface, (255,255,255), (eye_x, my + 2), 3)
+            pygame.draw.circle(surface, (10,10,10), (eye_x, my + 2), 3)
 
     def draw(self, surface):
         x, y = self.rect.x, self.rect.y
