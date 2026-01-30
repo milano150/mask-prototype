@@ -61,6 +61,8 @@ while running:
             if event.key == pygame.K_3:
                 player.change_mask("kali")
                 wheel_target = mask_order.index(player.current_mask)
+            if event.key == pygame.K_SPACE:
+                player.shoot_fireball()
 
 
     # Fill screen with a color
