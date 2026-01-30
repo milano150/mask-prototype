@@ -19,9 +19,16 @@ mask_icons = {
     "kali": pygame.image.load("assets/kali.png").convert_alpha(),
 }
 
-ICON_SIZE = 100
-CENTER_SIZE = 140
-BOTTOM_Y = HEIGHT 
+wheel_image = pygame.image.load("assets/wheel2.png").convert_alpha()
+wheel_image.set_alpha(90)  # 👈 lower = more transparent (try 60–120)
+
+WHEEL_UI_SIZE = 380
+wheel_image = pygame.transform.scale(wheel_image, (WHEEL_UI_SIZE, WHEEL_UI_SIZE))
+
+
+ICON_SIZE = 130
+CENTER_SIZE = 180
+BOTTOM_Y = HEIGHT - 20
 SPACING = 300
 
 wheel_offset = 0.0        
@@ -76,13 +83,18 @@ while running:
     center_x = WIDTH // 2
     center_y = BOTTOM_Y
 
+    VISIBLE_RANGE = 2.2   # how far masks exist
+    FADE_RANGE = 0.5      # fade-out distance at edges
+
+    wheel_rect = wheel_image.get_rect(midbottom=(WIDTH // 2, HEIGHT))
+    screen.blit(wheel_image, wheel_rect)
+    
+
+
     for i, mask_name in enumerate(mask_order):
         # position relative to selected mask
         relative_pos = i - wheel_offset
 
-        # clamp visible range (optional but cleaner)
-        if abs(relative_pos) > 1.5:
-            continue
 
         # map relative position to angle
         angle = relative_pos * WHEEL_ARC
@@ -93,6 +105,15 @@ while running:
 
         # --- DEPTH / FADE FACTOR ---
         distance = abs(relative_pos)
+
+        # Smooth visibility fade
+        fade = 1.0
+        if distance > VISIBLE_RANGE - FADE_RANGE:
+            fade = max(
+                0,
+                1 - (distance - (VISIBLE_RANGE - FADE_RANGE)) / FADE_RANGE
+            )
+
 
         # t = 1 at center, 0 at edge
         t = max(0, 1 - distance) ** 2
@@ -106,8 +127,9 @@ while running:
         icon = pygame.transform.rotate(icon, rotation)
 
         # --- OPACITY (FADE OUT) ---
-        alpha = int(80 + 175 * t)   # center ≈ 255, sides ≈ 80
+        alpha = int((80 + 175 * t) * fade)
         icon.set_alpha(alpha)
+
 
         rect = icon.get_rect(center=(x, y))
         screen.blit(icon, rect)
