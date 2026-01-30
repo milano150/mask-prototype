@@ -12,6 +12,7 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Mask Game")
 
+
 # --- MASK UI SETUP ---
 mask_icons = {
     "theyyam": pygame.image.load("assets/theyyam.png").convert_alpha(),
@@ -19,15 +20,23 @@ mask_icons = {
     "kali": pygame.image.load("assets/kali.png").convert_alpha(),
 }
 
-ICON_SIZE = 100
-CENTER_SIZE = 140
-BOTTOM_Y = HEIGHT 
+wheel_image = pygame.image.load("assets/wheel2.png").convert_alpha()
+wheel_image.set_alpha(90)  # 👈 lower = more transparent (try 60–120)
+
+
+WHEEL_UI_SIZE = 300
+wheel_image = pygame.transform.scale(wheel_image, (WHEEL_UI_SIZE, WHEEL_UI_SIZE))
+
+
+ICON_SIZE = 80
+CENTER_SIZE = 100
+BOTTOM_Y = HEIGHT - 10
 SPACING = 300
 
 wheel_offset = 0.0        
 wheel_target = 0.0 
 
-WHEEL_RADIUS = 150     # how curved the wheel is
+WHEEL_RADIUS = 120     # how curved the wheel is
 WHEEL_ARC = math.pi / 4  # total arc (60 degrees)
 
 
@@ -63,6 +72,8 @@ while running:
                 wheel_target = mask_order.index(player.current_mask)
             if event.key == pygame.K_SPACE:
                 player.shoot_fireball()
+            if event.key == pygame.K_h:
+                player.take_damage(10)  # test key
 
 
     # Fill screen with a color
@@ -75,6 +86,15 @@ while running:
     # --- DRAW MASK WHEEL UI ---
     center_x = WIDTH // 2
     center_y = BOTTOM_Y
+
+    # --- DRAW HEALTH BAR ---
+    bar_rect = player.health_bar.get_frame_rect()
+    screen.blit(health_bar_img, (20, 20), bar_rect)
+
+    wheel_rect = wheel_image.get_rect(midbottom=(WIDTH // 2, HEIGHT))
+    screen.blit(wheel_image, wheel_rect)
+    
+
 
     for i, mask_name in enumerate(mask_order):
         # position relative to selected mask
@@ -102,8 +122,8 @@ while running:
         icon = pygame.transform.scale(mask_icons[mask_name], (size, size))
 
         # --- ROTATION ---
-        rotation = -math.degrees(angle) * 0.8
-        icon = pygame.transform.rotate(icon, rotation)
+        #rotation = -math.degrees(angle) * 0.8
+        #icon = pygame.transform.rotate(icon, rotation)
 
         # --- OPACITY (FADE OUT) ---
         alpha = int(80 + 175 * t)   # center ≈ 255, sides ≈ 80

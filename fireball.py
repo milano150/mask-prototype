@@ -5,10 +5,12 @@ import pygame
 class Fireball:
     def __init__(self, x, y, direction):
         self.image = pygame.image.load("assets/fireball2.png").convert_alpha()
+        self.image = pygame.transform.scale(self.image, (256, 256))
 
         self.direction = direction  # -1 = left, 1 = right
         self.speed = 600
         self.lifetime = 1.5
+        
 
         # Flip image if going left
         if self.direction == -1:
