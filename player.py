@@ -2,6 +2,35 @@ import pygame
 import math
 from fireball import Fireball
 
+BAR_WIDTH = 128     # width of ONE bar frame
+BAR_HEIGHT = 16     # height of ONE bar frame
+TOTAL_FRAMES = 10   # number of bar states in image
+
+health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
+
+class HealthBar:
+    def __init__(self, max_health):
+        self.max_health = max_health
+        self.current_health = max_health
+
+    def take_damage(self, amount):
+        self.current_health = max(0, self.current_health - amount)
+
+    def heal(self, amount):
+        self.current_health = min(self.max_health, self.current_health + amount)
+
+    def get_frame_rect(self):
+        health_ratio = self.current_health / self.max_health
+        frame_index = int((1 - health_ratio) * (TOTAL_FRAMES - 1))
+        frame_index = max(0, min(TOTAL_FRAMES - 1, frame_index))
+
+        return pygame.Rect(
+            frame_index * BAR_WIDTH,
+            0,
+            BAR_WIDTH,
+            BAR_HEIGHT
+        )
+
 class Player:
     def __init__(self, x, y):
         self.size = 40
@@ -16,6 +45,7 @@ class Player:
         self.current_mask = "theyyam"
         self.speed = self.masks[self.current_mask]["speed"]
         self.color = self.masks[self.current_mask]["color"]
+        
 
         self.fireballs = []
         self.fireball_cooldown = 0.8
