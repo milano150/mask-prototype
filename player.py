@@ -2,35 +2,56 @@ import pygame
 import math
 from fireball import Fireball
 
-BAR_WIDTH = 128     # width of ONE bar frame
-BAR_HEIGHT = 16     # height of ONE bar frame
-TOTAL_FRAMES = 10   # number of bar states in image
+# =====================
+# HEALTH BAR CONSTANTS
+# =====================
+BAR_WIDTH = 64
+BAR_HEIGHT = 64
+TOTAL_FRAMES = 13
+COLUMNS = 3
 
-health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
 
 class HealthBar:
     def __init__(self, max_health):
         self.max_health = max_health
-        self.current_health = max_health
+
+        # Each frame = one health step
+        self.step = max_health / TOTAL_FRAMES
+
+        # Start full
+        self.current_step = 0  # 0 = full, last = empty
 
     def take_damage(self, amount):
-        self.current_health = max(0, self.current_health - amount)
+        steps_lost = round(amount / self.step)
+        self.current_step = min(
+            TOTAL_FRAMES - 1,
+            self.current_step + max(1, steps_lost)
+        )
 
     def heal(self, amount):
-        self.current_health = min(self.max_health, self.current_health + amount)
+        steps_gained = round(amount / self.step)
+        self.current_step = max(
+            0,
+            self.current_step - max(1, steps_gained)
+        )
 
     def get_frame_rect(self):
-        health_ratio = self.current_health / self.max_health
-        frame_index = int((1 - health_ratio) * (TOTAL_FRAMES - 1))
-        frame_index = max(0, min(TOTAL_FRAMES - 1, frame_index))
+        frame_index = self.current_step
+
+        col = frame_index % COLUMNS
+        row = frame_index // COLUMNS
 
         return pygame.Rect(
-            frame_index * BAR_WIDTH,
-            0,
+            col * BAR_WIDTH,
+            row * BAR_HEIGHT,
             BAR_WIDTH,
             BAR_HEIGHT
         )
 
+
+# =====================
+# PLAYER
+# =====================
 class Player:
     def __init__(self, x, y):
         self.size = 40
@@ -39,25 +60,37 @@ class Player:
         self.masks = {
             "theyyam": {"speed": 300, "color": (50, 200, 255)},
             "bhairava": {"speed": 450, "color": (50, 255, 100)},
-            "kali": {"speed": 180, "color": (200, 50, 50)}
+            "kali": {"speed": 180, "color": (200, 50, 50)},
         }
 
         self.current_mask = "theyyam"
         self.speed = self.masks[self.current_mask]["speed"]
         self.color = self.masks[self.current_mask]["color"]
-        
 
+        # Health bar (segmented, frame-based)
+        self.health_bar = HealthBar(100)
+
+        # Fireballs
         self.fireballs = []
         self.fireball_cooldown = 0.8
-        self.fireball_timer = 0
+        self.fireball_timer = 0.0
 
-        self.facing = 1  # right
+        self.facing = 1  # 1 = right, -1 = left
 
+    # -----------------
+    # MASK
+    # -----------------
     def change_mask(self, mask_name):
+        if mask_name not in self.masks:
+            return
+
         self.current_mask = mask_name
         self.speed = self.masks[mask_name]["speed"]
         self.color = self.masks[mask_name]["color"]
 
+    # -----------------
+    # COMBAT
+    # -----------------
     def shoot_fireball(self):
         if self.current_mask != "theyyam":
             return
@@ -69,6 +102,12 @@ class Player:
         self.fireballs.append(Fireball(fx, fy, self.facing))
         self.fireball_timer = self.fireball_cooldown
 
+    def take_damage(self, amount):
+        self.health_bar.take_damage(amount)
+
+    # -----------------
+    # UPDATE
+    # -----------------
     def update(self, keys, dt):
         dx = dy = 0
 
@@ -84,22 +123,30 @@ class Player:
             dy += 1
 
         length = math.hypot(dx, dy)
-        if length:
+        if length > 0:
             dx /= length
             dy /= length
 
         self.rect.x += dx * self.speed * dt
         self.rect.y += dy * self.speed * dt
 
+        # Fireball cooldown
         if self.fireball_timer > 0:
             self.fireball_timer -= dt
 
+        # Update fireballs
         for fireball in self.fireballs:
             fireball.update(dt)
 
-        self.fireballs = [f for f in self.fireballs if not f.is_dead(800)]
+        self.fireballs = [
+            f for f in self.fireballs if not f.is_dead(800)
+        ]
 
+    # -----------------
+    # DRAW
+    # -----------------
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)
+
         for fireball in self.fireballs:
             fireball.draw(screen)

@@ -1,7 +1,9 @@
 import pygame
 import sys
-from player import Player
+from player import Player, BAR_WIDTH, BAR_HEIGHT
 import math
+
+
 
 
 # Initialize pygame
@@ -11,6 +13,9 @@ pygame.init()
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Mask Game")
+
+health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
+
 
 
 # --- MASK UI SETUP ---
@@ -27,11 +32,16 @@ wheel_image.set_alpha(90)  # 👈 lower = more transparent (try 60–120)
 WHEEL_UI_SIZE = 300
 wheel_image = pygame.transform.scale(wheel_image, (WHEEL_UI_SIZE, WHEEL_UI_SIZE))
 
+#defs
 
 ICON_SIZE = 80
 CENTER_SIZE = 100
 BOTTOM_Y = HEIGHT - 10
 SPACING = 300
+
+BAR_VISIBLE_Y = int(BAR_HEIGHT * 0.4)
+BAR_VISIBLE_H = int(BAR_HEIGHT * 0.25)
+
 
 wheel_offset = 0.0        
 wheel_target = 0.0 
@@ -87,9 +97,35 @@ while running:
     center_x = WIDTH // 2
     center_y = BOTTOM_Y
 
-    # --- DRAW HEALTH BAR ---
+    # get full frame rect
     bar_rect = player.health_bar.get_frame_rect()
-    screen.blit(health_bar_img, (20, 20), bar_rect)
+
+    # crop ONLY the visible bar area
+    cropped_rect = pygame.Rect(
+        bar_rect.x,
+        bar_rect.y + BAR_VISIBLE_Y,
+        BAR_WIDTH,
+        BAR_VISIBLE_H
+    )
+
+    # extract cropped area
+    frame = pygame.Surface((BAR_WIDTH, BAR_VISIBLE_H), pygame.SRCALPHA)
+    frame.blit(health_bar_img, (0, 0), cropped_rect)
+
+
+    # SCALE UP (tweak these numbers if you want it even bigger)
+    UI_WIDTH = 260
+    UI_HEIGHT = 70
+    frame = pygame.transform.scale(frame, (UI_WIDTH, UI_HEIGHT))
+
+    # center horizontally, small margin from top
+    x = (WIDTH - UI_WIDTH) // 2
+    y = 4
+
+
+    # draw the bar
+    screen.blit(frame, (x, y))
+
 
     wheel_rect = wheel_image.get_rect(midbottom=(WIDTH // 2, HEIGHT))
     screen.blit(wheel_image, wheel_rect)
