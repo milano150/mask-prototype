@@ -91,8 +91,11 @@ class Dust:
 class Player:
     def __init__(self, x, y):
         self.dead = False
-        self.rect = pygame.Rect(0, 0, 40, 105)
+        self.rect = pygame.Rect(0, 0, 36, 60)
         self.rect.center = (x, y)
+        self.fire_dir_x = 1
+        self.fire_dir_y = 0
+
 
 
         self.masks = {
@@ -184,20 +187,37 @@ class Player:
     # -----------------
     # COMBAT
     # -----------------
-    def shoot_fireball(self):
+    def shoot_fireball(self, keys):
         if self.current_mask != "theyyam":
             return None
-
         if self.fireball_timer > 0:
             return None
 
-        fx = self.rect.centerx
-        fy = self.rect.centery
+        # Try live input first
+        dx = dy = 0
+        if keys[pygame.K_w]:
+            dy = -1
+        elif keys[pygame.K_s]:
+            dy = 1
+        elif keys[pygame.K_a]:
+            dx = -1
+        elif keys[pygame.K_d]:
+            dx = 1
+        else:
+            # fallback to last facing direction
+            dx = self.fire_dir_x
+            dy = self.fire_dir_y
 
-        fireball = Fireball(fx, fy, self.facing)
+        fx = self.rect.centerx
+        fy = self.rect.y + 2
+
+        fireball = Fireball(fx, fy, dx, dy)
 
         self.fireball_timer = self.fireball_cooldown
-        return fireball   # ✅ IMPORTANT
+        return fireball
+
+
+
 
 
     def take_damage(self, amount):
@@ -267,6 +287,14 @@ class Player:
             self.walk_count += dt * 10
         else:
             self.walk_count = 0
+
+        if dx != 0 or dy != 0:
+            if abs(dx) > abs(dy):
+                self.fire_dir_x = 1 if dx > 0 else -1
+                self.fire_dir_y = 0
+            else:
+                self.fire_dir_x = 0
+                self.fire_dir_y = 1 if dy > 0 else -1
 
 
         length = math.hypot(dx, dy)
@@ -434,52 +462,56 @@ class Player:
 
         cx, cy = camera_offset
         x = self.rect.x - cx
-        y = self.rect.y - cy
+        y = self.rect.y - cy - 30
 
         for d in self.dust_particles:
             d.draw(screen, (cx, cy))
 
         # --- BODY ---
         if self.view == "FRONT":
-            pygame.draw.rect(screen, BEARD_BROWN, (x + 8, y + bob, 24, 25), border_radius=5)
-            pygame.draw.rect(screen, SHIRT_DARK, (x + 6, y + 35 + bob, 28, 30))
+            pygame.draw.rect(screen, BEARD_BROWN, (x + 8, y + bob, 24, 22), border_radius=5)
+            pygame.draw.rect(screen, SHIRT_DARK, (x + 6, y + 22 + bob, 28, 18))
 
-            pygame.draw.rect(screen, SKIN, (x + 2, y + 35 + bob, 4, 18))
-            pygame.draw.rect(screen, SKIN, (x + 34, y + 35 + bob, 4, 18))
-            pygame.draw.rect(screen, SKIN, (x + 1, y + 53 + bob, 6, 6))
-            pygame.draw.rect(screen, SKIN, (x + 33, y + 53 + bob, 6, 6))
+            pygame.draw.rect(screen, SKIN, (x + 2, y + 26 + bob, 4, 14))
+            pygame.draw.rect(screen, SKIN, (x + 34, y + 26 + bob, 4, 14))
+            pygame.draw.rect(screen, SKIN, (x + 1, y + 40 + bob, 6, 6))
+            pygame.draw.rect(screen, SKIN, (x + 33, y + 40 + bob, 6, 6))
 
-            pygame.draw.rect(screen, PANTS_BROWN, (x + 8, y + 65, 10, 20 + leg_step))
-            pygame.draw.rect(screen, PANTS_BROWN, (x + 22, y + 65, 10, 20 - leg_step))
-            pygame.draw.rect(screen, BOOT_COLOR, (x + 7, y + 85 + leg_step, 12, 8), border_radius=2)
-            pygame.draw.rect(screen, BOOT_COLOR, (x + 21, y + 85 - leg_step, 12, 8), border_radius=2)
+            pygame.draw.rect(screen, PANTS_BROWN, (x + 8, y + 46, 10, 12 + leg_step))
+            pygame.draw.rect(screen, PANTS_BROWN, (x + 22, y + 46, 10, 12 - leg_step))
+            pygame.draw.rect(screen, BOOT_COLOR, (x + 7, y + 58 + leg_step, 12, 6), border_radius=2)
+            pygame.draw.rect(screen, BOOT_COLOR, (x + 21, y + 58 - leg_step, 12, 6), border_radius=2)
+
 
         elif self.view == "BACK":
-            pygame.draw.rect(screen, BEARD_BROWN, (x + 8, y + bob, 24, 30))
-            pygame.draw.rect(screen, SHIRT_DARK, (x + 6, y + 35 + bob, 28, 30))
+            pygame.draw.rect(screen, BEARD_BROWN, (x + 8, y + bob, 24, 22))
+            pygame.draw.rect(screen, SHIRT_DARK, (x + 6, y + 22 + bob, 28, 18))
 
-            pygame.draw.rect(screen, SKIN, (x + 3, y + 35 + bob, 4, 18))
-            pygame.draw.rect(screen, SKIN, (x + 33, y + 35 + bob, 4, 18))
-            pygame.draw.rect(screen, SKIN, (x + 2, y + 53 + bob, 6, 6))
-            pygame.draw.rect(screen, SKIN, (x + 32, y + 53 + bob, 6, 6))
+            pygame.draw.rect(screen, SKIN, (x + 3, y + 26 + bob, 4, 14))
+            pygame.draw.rect(screen, SKIN, (x + 33, y + 26 + bob, 4, 14))
+            pygame.draw.rect(screen, SKIN, (x + 2, y + 40 + bob, 6, 6))
+            pygame.draw.rect(screen, SKIN, (x + 32, y + 40 + bob, 6, 6))
 
-            pygame.draw.rect(screen, PANTS_BROWN, (x + 8, y + 65, 10, 20 + leg_step))
-            pygame.draw.rect(screen, PANTS_BROWN, (x + 22, y + 65, 10, 20 - leg_step))
-            pygame.draw.rect(screen, BOOT_COLOR, (x + 7, y + 85 + leg_step, 12, 8), border_radius=2)
-            pygame.draw.rect(screen, BOOT_COLOR, (x + 21, y + 85 - leg_step, 12, 8), border_radius=2)
+            pygame.draw.rect(screen, PANTS_BROWN, (x + 8, y + 46, 10, 12 + leg_step))
+            pygame.draw.rect(screen, PANTS_BROWN, (x + 22, y + 46, 10, 12 - leg_step))
+            pygame.draw.rect(screen, BOOT_COLOR, (x + 7, y + 58 + leg_step, 12, 6), border_radius=2)
+            pygame.draw.rect(screen, BOOT_COLOR, (x + 21, y + 58 - leg_step, 12, 6), border_radius=2)
+
 
         else:  # LEFT / RIGHT
             is_right = self.view == "RIGHT"
-            pygame.draw.rect(screen, BEARD_BROWN, (x + 12, y + bob, 16, 30))
-            pygame.draw.rect(screen, SHIRT_DARK, (x + 14, y + 35 + bob, 12, 30))
 
-            arm_x = x + 24 if is_right else x + 10
-            pygame.draw.rect(screen, SKIN, (arm_x, y + 38 + bob, 5, 15))
-            pygame.draw.rect(screen, SKIN, (arm_x - 1, y + 53 + bob, 7, 6))
+            pygame.draw.rect(screen, BEARD_BROWN, (x + 12, y + bob, 16, 22))
+            pygame.draw.rect(screen, SHIRT_DARK, (x + 14, y + 22 + bob, 12, 18))
 
-            pygame.draw.rect(screen, PANTS_BROWN, (x + 14, y + 65, 6, 20 + leg_step))
-            pygame.draw.rect(screen, PANTS_BROWN, (x + 20, y + 65, 6, 20 - leg_step))
-            pygame.draw.rect(screen, BOOT_COLOR, (x + 14, y + 85 + leg_step, 12, 8))
+            arm_x = x + 22 if is_right else x + 10
+            pygame.draw.rect(screen, SKIN, (arm_x, y + 26 + bob, 5, 12))
+            pygame.draw.rect(screen, SKIN, (arm_x - 1, y + 38 + bob, 7, 5))
+
+            pygame.draw.rect(screen, PANTS_BROWN, (x + 14, y + 46, 6, 12 + leg_step))
+            pygame.draw.rect(screen, PANTS_BROWN, (x + 20, y + 46, 6, 12 - leg_step))
+            pygame.draw.rect(screen, BOOT_COLOR, (x + 14, y + 58 + leg_step, 12, 6))
+
 
         # --- MASK ---
         self.draw_mask_head(screen, x + 20, y + bob + 5, self.view)

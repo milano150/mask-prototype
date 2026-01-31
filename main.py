@@ -154,11 +154,12 @@ while running:
                 player.take_damage(10)
 
             if event.key == pygame.K_SPACE:
-                # 🔥 Fireball (Theyyam)
                 if player.current_mask == "theyyam":
-                    fireball = player.shoot_fireball()
+                    keys_now = pygame.key.get_pressed()
+                    fireball = player.shoot_fireball(keys_now)
                     if fireball:
                         fireballs.append(fireball)
+
 
                 # ⚔️ Sword (Kali)
                 elif player.current_mask == "kali":

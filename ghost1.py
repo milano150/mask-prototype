@@ -11,6 +11,7 @@ class Ghost:
         self.knockback = 500
         self.hit_cooldown = 700  # ms
         self.alive = True
+        self.alpha = 160
 
 
         # --- knockback velocity (same idea as Player) ---
@@ -27,7 +28,7 @@ class Ghost:
         self.y = y
 
         
-        self.speed = 2
+        self.speed = 50
         self.size = 32
         self.direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
         self.change_dir_timer = 0
@@ -135,7 +136,7 @@ class Ghost:
                 self.sound_timer = now
 
 
-        player_rect = player.get_rect()
+        player_rect = player.get_rect()     
         now = pygame.time.get_ticks()
 
         self.rect = pygame.Rect(
@@ -151,13 +152,15 @@ class Ghost:
                 if not player.is_invulnerable():
                     self.last_hit_time = now
                     self.hit_player(player)
+        speed_mag = abs(self.vx) + abs(self.vy)
+        self.alpha = max(120, 200 - int(speed_mag * 0.4))
+
     
 
     def draw(self, surface, camera_offset):
-
         now = pygame.time.get_ticks()
 
-        # 🔴 Flash red if recently hit
+        # Flash red when hit
         if now - self.last_hit_time < self.hit_flash_duration:
             body_color = self.hit_body_color
         else:
@@ -166,30 +169,38 @@ class Ghost:
         cx, cy = camera_offset
         tx = int(self.x - self.size // 2 - cx)
         ty = int(self.y - self.size // 2 - cy)
-
         s = self.size
 
-        # Pixel Body
-        pygame.draw.rect(surface, body_color, (tx, ty + 8, s, s - 16))
-        pygame.draw.rect(surface, body_color, (tx + 4, ty + 4, s - 8, 4))
-        pygame.draw.rect(surface, body_color, (tx + 8, ty, s - 16, 4))
+        # 👻 Ghost surface (transparent)
+        ghost_surf = pygame.Surface((s, s), pygame.SRCALPHA)
+        ghost_surf.set_alpha(self.alpha)
 
-        # Bottom Curves (Teeth)
+        # Body
+        pygame.draw.rect(ghost_surf, body_color, (0, 8, s, s - 16))
+        pygame.draw.rect(ghost_surf, body_color, (4, 4, s - 8, 4))
+        pygame.draw.rect(ghost_surf, body_color, (8, 0, s - 16, 4))
+
+        # Teeth animation
         if self.anim_frame == 0:
-            pygame.draw.rect(surface, body_color, (tx, ty + s - 8, 8, 8))
-            pygame.draw.rect(surface, body_color, (tx + 12, ty + s - 8, 8, 8))
-            pygame.draw.rect(surface, body_color, (tx + 24, ty + s - 8, 8, 8))
+            pygame.draw.rect(ghost_surf, body_color, (0, s - 8, 8, 8))
+            pygame.draw.rect(ghost_surf, body_color, (12, s - 8, 8, 8))
+            pygame.draw.rect(ghost_surf, body_color, (24, s - 8, 8, 8))
         else:
-            pygame.draw.rect(surface, body_color, (tx + 4, ty + s - 8, 8, 8))
-            pygame.draw.rect(surface, body_color, (tx + 20, ty + s - 8, 8, 8))
+            pygame.draw.rect(ghost_surf, body_color, (4, s - 8, 8, 8))
+            pygame.draw.rect(ghost_surf, body_color, (20, s - 8, 8, 8))
 
         # Eyes
         off = {"UP": (0, -3), "DOWN": (0, 3), "LEFT": (-3, 0), "RIGHT": (3, 0)}
         ox, oy = off[self.direction]
-        pygame.draw.rect(surface, self.eye_white, (tx + 4, ty + 6, 10, 10))
-        pygame.draw.rect(surface, self.eye_white, (tx + 18, ty + 6, 10, 10))
-        pygame.draw.rect(surface, self.pupil_red, (tx + 6 + ox, ty + 8 + oy, 5, 5))
-        pygame.draw.rect(surface, self.pupil_red, (tx + 20 + ox, ty + 8 + oy, 5, 5))
+
+        pygame.draw.rect(ghost_surf, self.eye_white, (4, 6, 10, 10))
+        pygame.draw.rect(ghost_surf, self.eye_white, (18, 6, 10, 10))
+        pygame.draw.rect(ghost_surf, self.pupil_red, (6 + ox, 8 + oy, 5, 5))
+        pygame.draw.rect(ghost_surf, self.pupil_red, (20 + ox, 8 + oy, 5, 5))
+
+        # Blit to main surface
+        surface.blit(ghost_surf, (tx, ty))
+
     def hit_player(self, player):
         # Damage
         player.take_damage(self.damage)
