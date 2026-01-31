@@ -91,10 +91,16 @@ class Player:
         self.rect = pygame.Rect(x - 20, y - 50, 40, 105)
 
         self.masks = {
-            "theyyam": {"speed": 500},
-            "bhairava": {"speed": 550},
-            "kali": {"speed": 500},
+            "theyyam": {"speed": 400},
+            "garuda": {"speed": 700},
+            "kali": {"speed": 400},
         }
+
+        self.mask_switch_cd = 0.0
+        self.mask_switch_delay = 1.2  # seconds
+
+
+
 
         self.current_mask = "theyyam"
         self.speed = self.masks[self.current_mask]["speed"]
@@ -155,6 +161,17 @@ class Player:
         if mask_name in self.masks:
             self.current_mask = mask_name
             self.speed = self.masks[mask_name]["speed"]
+    def respawn(self, x, y):
+        self.rect.center = (x, y)
+        self.health_bar = HealthBar(100)
+        self.dead = False
+
+        self.velocity_x = 0
+        self.velocity_y = 0
+
+        self.sword_swinging = False
+        self.fireball_timer = 0
+
 
     # -----------------
     # COMBAT
@@ -205,7 +222,7 @@ class Player:
                 ghost.apply_knockback(
                     self.rect.centerx,
                     self.rect.centery,
-                    600
+                    16
                 )
 
 
@@ -237,6 +254,12 @@ class Player:
             dy += 1.5
             self.view = "FRONT"
             moving = True
+
+        if moving:
+            self.walk_count += dt * 10
+        else:
+            self.walk_count = 0
+
 
         length = math.hypot(dx, dy)
         if length > 0:
@@ -278,10 +301,11 @@ class Player:
             self.knockback_timer = max(0.0, self.knockback_timer - dt)
         if self.invul_timer > 0:
             self.invul_timer = max(0.0, self.invul_timer - dt)
-            if random.random() > 0.6:
-                self.dust_particles.append(
-                    Dust(self.rect.centerx, self.rect.bottom - 5)
-                )
+        if moving and random.random() > 0.85:
+            self.dust_particles.append(
+                Dust(self.rect.centerx, self.rect.bottom - 5)
+            )
+
         else:
             self.walk_count = 0
 
@@ -313,6 +337,10 @@ class Player:
             if self.sword_timer <= 0:
                 self.sword_swinging = False
                 self.sword_angle = 0
+        if self.mask_switch_cd > 0:
+            self.mask_switch_cd -= dt
+            self.mask_switch_cd = max(0, self.mask_switch_cd)
+
 
     # -----------------
     # MASK HEAD
@@ -322,7 +350,7 @@ class Player:
 
         if self.current_mask == "theyyam":
             base_c, face_c = GOLD, RED
-        elif self.current_mask == "bhairava":
+        elif self.current_mask == "garuda":
             base_c, face_c = RED, YELLOW
         else:  # kali
             base_c, face_c = (192, 192, 192), BLUE

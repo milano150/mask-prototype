@@ -23,7 +23,7 @@ health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
 # --- MASK UI SETUP ---
 mask_icons = {
     "theyyam": pygame.image.load("assets/theyyam.png").convert_alpha(),
-    "bhairava": pygame.image.load("assets/bhairava.png").convert_alpha(),
+    "garuda": pygame.image.load("assets/garuda.png").convert_alpha(),
     "kali": pygame.image.load("assets/kali.png").convert_alpha(),
 }
 
@@ -32,6 +32,24 @@ wheel_image.set_alpha(90)
 
 WHEEL_UI_SIZE = 300
 wheel_image = pygame.transform.scale(wheel_image, (WHEEL_UI_SIZE, WHEEL_UI_SIZE))
+
+hotbar_img = pygame.image.load("assets/hotbar.png").convert_alpha()
+
+FRAME_W = 64
+FRAME_H = 64
+
+hotbar_normal = hotbar_img.subsurface(pygame.Rect(0, 0, FRAME_W, FRAME_H))
+hotbar_gold   = hotbar_img.subsurface(pygame.Rect(0, FRAME_H, FRAME_W, FRAME_H))
+
+HOTBAR_SCALE = 4.5  # tweak size here
+
+hotbar_normal = pygame.transform.scale(
+    hotbar_normal, (FRAME_W * HOTBAR_SCALE, FRAME_H * HOTBAR_SCALE)
+)
+hotbar_gold = pygame.transform.scale(
+    hotbar_gold, (FRAME_W * HOTBAR_SCALE, FRAME_H * HOTBAR_SCALE)
+)
+
 
 # UI constants
 ICON_SIZE = 80
@@ -51,7 +69,7 @@ MASK_NAME_FADE = 0.5
 WHEEL_RADIUS = 120
 WHEEL_ARC = math.pi / 4
 
-mask_order = ["theyyam", "bhairava", "kali"]
+mask_order = ["theyyam", "garuda", "kali"]
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -89,20 +107,25 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_1:
+
+            can_switch = player.mask_switch_cd <= 0  # gold hotbar
+            if event.key == pygame.K_1 and can_switch:
                 player.change_mask("theyyam")
-                wheel_target = mask_order.index(player.current_mask)
+                player.mask_switch_cd = player.mask_switch_delay
                 mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
+                wheel_target = mask_order.index("theyyam") 
 
-            if event.key == pygame.K_2:
-                player.change_mask("bhairava")
-                wheel_target = mask_order.index(player.current_mask)
+            if event.key == pygame.K_2 and can_switch:
+                player.change_mask("garuda")
+                player.mask_switch_cd = player.mask_switch_delay
                 mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
+                wheel_target = mask_order.index("garuda") 
 
-            if event.key == pygame.K_3:
+            if event.key == pygame.K_3 and can_switch:
                 player.change_mask("kali")
-                wheel_target = mask_order.index(player.current_mask)
+                player.mask_switch_cd = player.mask_switch_delay
                 mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
+                wheel_target = mask_order.index("kali") 
 
 
             if event.key == pygame.K_h:
@@ -121,6 +144,16 @@ while running:
                         player.sword_swinging = True
                         player.sword_timer = player.sword_duration
                         player.sword_angle = 90 if player.facing == 1 else -105
+            if player.dead and event.key == pygame.K_r:
+                # Reset player
+                player.respawn(WIDTH // 2, HEIGHT // 2)
+
+                # Reset enemies & projectiles
+                ghosts.clear()
+                fireballs.clear()
+                ghosts.append(Ghost(WIDTH, HEIGHT))
+
+                spawn_timer = 0
 
 
     keys = pygame.key.get_pressed()
@@ -186,13 +219,16 @@ while running:
     screen.fill((20, 20, 20))
     if player.dead:
         overlay = pygame.Surface((WIDTH, HEIGHT))
-        overlay.fill((0, 0, 0))
+        overlay.fill((0, 0, 0, 160))
         overlay.set_alpha(180)
         screen.blit(overlay, (0, 0))
 
         text = death_font.render("YOU DIED", True, (200, 0, 0))
+        subtext = font.render("     press R to respawn", True, (200, 200, 200))
         rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        rect2 = text.get_rect(center=(WIDTH // 2, (HEIGHT // 2)+90))
         screen.blit(text, rect)
+        screen.blit(subtext, rect2)
 
         pygame.display.flip()
         continue
@@ -229,7 +265,22 @@ while running:
 
     # --- MASK WHEEL ---
     wheel_rect = wheel_image.get_rect(midbottom=(WIDTH // 2, HEIGHT))
-    screen.blit(wheel_image, wheel_rect)
+    #screen.blit(wheel_image, wheel_rect)
+    is_ready = player.mask_switch_cd <= 0
+
+    # Base hotbar
+    hotbar_base = hotbar_gold if is_ready else hotbar_normal
+    hotbar = hotbar_base.copy()
+
+    # Base opacity
+    hotbar.set_alpha(140 if not is_ready else 210)
+
+    hb_rect = hotbar.get_rect(
+        midbottom=wheel_rect.midbottom
+    )
+    screen.blit(hotbar, hb_rect)
+
+
 
     if mask_name_timer > 0:
         mask_name = player.current_mask
@@ -263,11 +314,16 @@ while running:
         size = int(ICON_SIZE + (CENTER_SIZE - ICON_SIZE) * t)
         icon = pygame.transform.scale(mask_icons[name], (size, size))
 
+        # 🎠 CAROUSEL ROTATION (exact behavior)
+        rotation = 0  
+        icon = pygame.transform.rotate(icon, rotation)
+
         alpha = int(80 + 175 * t)
         icon.set_alpha(alpha)
 
         rect = icon.get_rect(center=(x, y))
         screen.blit(icon, rect)
+
 
     pygame.display.flip()
 
