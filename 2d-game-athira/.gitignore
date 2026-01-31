@@ -1,0 +1,16 @@
+# Godot-specific ignores
+# ----------------------
+.godot/                # This is the most important one (contains huge imported assets)
+*.import               # Godot can recreate these from your original source files
+export_presets.cfg     # Prevents leaking export passwords or local paths
+
+# Logic & Build ignores
+# ---------------------
+data_*.res             # Large generated resource files
+.tmp/                  # Temporary files
+
+# System & Editor ignores
+# -----------------------
+.DS_Store              # macOS specific
+Thumbs.db              # Windows specific
+*.log                  # Log files
