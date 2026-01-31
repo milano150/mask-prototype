@@ -5,7 +5,7 @@ from player import Player
 import math
 
 class Ghost:
-    def __init__(self, sw, sh):
+    def __init__(self, x, y):
 
         self.damage = 10
         self.knockback = 500
@@ -23,12 +23,9 @@ class Ghost:
         self.max_health = 40
         self.health = self.max_health   
 
-        self.sw = sw
-        self.sh = sh
-        
-        # Random Spawn at Corners
-        corners = [(50, 50), (sw-50, 50), (50, sh-50), (sw-50, sh-50)]
-        self.x, self.y = random.choice(corners)
+        self.x = x
+        self.y = y
+
         
         self.speed = 2
         self.size = 32
@@ -88,7 +85,7 @@ class Ghost:
 
 
 
-    def update(self, player: Player):
+    def update(self, player: Player, dt):
 
 
 
@@ -99,18 +96,20 @@ class Ghost:
 
         # Move on ONE axis only (stronger axis)
         if abs(dx) > abs(dy):
-            self.x += self.speed if dx > 0 else -self.speed
+            self.x += (self.speed if dx > 0 else -self.speed) * dt
             self.direction = "RIGHT" if dx > 0 else "LEFT"
         else:
-            self.y += self.speed if dy > 0 else -self.speed
+            self.y += (self.speed if dy > 0 else -self.speed) * dt
             self.direction = "DOWN" if dy > 0 else "UP"
+
         # --- apply knockback velocity ---
         self.x += self.vx
         self.y += self.vy
 
         # decay knockback (same idea as Player)
-        self.vx *= max(0.0, 1.0 - self.knockback_friction * 0.016)
-        self.vy *= max(0.0, 1.0 - self.knockback_friction * 0.016)
+        self.vx *= max(0.0, 1.0 - self.knockback_friction * dt)
+        self.vy *= max(0.0, 1.0 - self.knockback_friction * dt)
+
 
         # snap tiny values to zero
         if abs(self.vx) < 0.1:
@@ -118,14 +117,6 @@ class Ghost:
         if abs(self.vy) < 0.1:
             self.vy = 0.0
 
-
-
-        # Boundary Check
-        margin = 30
-        if self.x < margin or self.x > self.sw - margin or self.y < margin or self.y > self.sh - margin:
-            self.direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
-            self.x = max(margin, min(self.x, self.sw - margin))
-            self.y = max(margin, min(self.y, self.sh - margin))
 
         
 
@@ -142,12 +133,7 @@ class Ghost:
             if now - self.sound_timer > (self.sound_length + self.break_time):
                 self.sound.play()
                 self.sound_timer = now
-        ghost_rect = pygame.Rect(
-            self.x - self.size // 2,
-            self.y - self.size // 2,
-            self.size,
-            self.size
-        )
+
 
         player_rect = player.get_rect()
         now = pygame.time.get_ticks()
@@ -160,14 +146,14 @@ class Ghost:
         )
 
 
-        if ghost_rect.colliderect(player_rect):
+        if self.rect.colliderect(player_rect):
             if now - self.last_hit_time > self.hit_cooldown:
                 if not player.is_invulnerable():
                     self.last_hit_time = now
                     self.hit_player(player)
     
 
-    def draw(self, surface):
+    def draw(self, surface, camera_offset):
 
         now = pygame.time.get_ticks()
 
@@ -177,9 +163,10 @@ class Ghost:
         else:
             body_color = self.normal_body_color
 
+        cx, cy = camera_offset
+        tx = int(self.x - self.size // 2 - cx)
+        ty = int(self.y - self.size // 2 - cy)
 
-
-        tx, ty = int(self.x - self.size//2), int(self.y - self.size//2)
         s = self.size
 
         # Pixel Body
@@ -212,49 +199,3 @@ class Ghost:
 
 
 
-
-# --- Main Spawner Logic ---
-if __name__ == "__main__":
-    pygame.init()
-    pygame.mixer.init()
-    
-    WIDTH, HEIGHT = 800, 600
-    win = pygame.display.set_mode((WIDTH, HEIGHT))
-    clock = pygame.time.Clock()
-
-    ghosts = []
-    ghosts.append(Ghost(WIDTH, HEIGHT)) # First ghost
-    
-    spawn_timer = 0
-    SPAWN_DELAY = 5000 # 5 seconds
-    MAX_GHOSTS = 6
-
-    run = True
-    while run:
-        win.fill((10, 10, 15))
-        dt = clock.get_time()
-        spawn_timer += dt
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: run = False
-
-        # Spawn logic
-        if len(ghosts) < MAX_GHOSTS and spawn_timer >= SPAWN_DELAY:
-            ghosts.append(Ghost(WIDTH, HEIGHT))
-            spawn_timer = 0
-
-        # Update and Draw
-        for g in ghosts:
-            g.update(player)
-            g.draw(win)
-        
-
-        
-
-
-        
-
-        pygame.display.flip()
-        clock.tick(60)
-
-    pygame.quit()

@@ -3,6 +3,9 @@ import sys
 from player import Player, BAR_WIDTH, BAR_HEIGHT
 import math
 from ghost1 import Ghost
+from maps.castle import load_castle, SpriteSheet, TILE_SIZE
+import random
+
 
 # Initialize pygame
 pygame.init()
@@ -17,6 +20,16 @@ death_font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 80)
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Mask Game")
+
+# --- LOAD CASTLE MAP ---
+game_map, walls, spawn = load_castle()
+
+# --- LOAD MAP TILES ---
+castle_sheet = SpriteSheet("maps/castle.png")
+cave_sheet = SpriteSheet("maps/cave.png")
+wall_tile = castle_sheet.get_sprite(120, 60)
+floor_tile = cave_sheet.get_sprite(16, 16)
+
 
 health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
 
@@ -74,11 +87,16 @@ mask_order = ["theyyam", "garuda", "kali"]
 clock = pygame.time.Clock()
 FPS = 60
 
-player = Player(WIDTH // 2, HEIGHT // 2)
+player = Player(*spawn)
+
 
 ghosts = []
 fireballs = []
-ghosts.append(Ghost(WIDTH, HEIGHT))
+ghosts.append(Ghost(
+    spawn[0] + random.randint(-200, 200),
+    spawn[1] + random.randint(-200, 200)
+))
+
 
 MAX_GHOSTS = 6
 SPAWN_DELAY = 5000
@@ -98,7 +116,11 @@ while running:
     spawn_timer += dt * 1000  # convert to ms
 
     if len(ghosts) < MAX_GHOSTS and spawn_timer >= SPAWN_DELAY:
-        ghosts.append(Ghost(WIDTH, HEIGHT))
+        ghosts.append(Ghost(
+            spawn[0] + random.randint(-200, 200),
+            spawn[1] + random.randint(-200, 200)
+        ))
+
         spawn_timer = 0
 
 
@@ -146,42 +168,44 @@ while running:
                         player.sword_angle = 90 if player.facing == 1 else -105
             if player.dead and event.key == pygame.K_r:
                 # Reset player
-                player.respawn(WIDTH // 2, HEIGHT // 2)
+                player.respawn(*spawn)
 
                 # Reset enemies & projectiles
                 ghosts.clear()
                 fireballs.clear()
-                ghosts.append(Ghost(WIDTH, HEIGHT))
+
+                ghosts.append(Ghost(
+                    spawn[0] + random.randint(-150, 150),
+                    spawn[1] + random.randint(-150, 150)
+                ))
+
+                
 
                 spawn_timer = 0
 
 
     keys = pygame.key.get_pressed()
+    old_rect = player.rect.copy()
     player.update(keys, dt)
+    for wall in walls:
+        if player.rect.colliderect(wall):
+            player.rect = old_rect
+            break
+
     # ⚔️ Sword damage + debug during swing
     if player.current_mask == "kali" and player.sword_swinging:
         player.sword_attack(ghosts, debug_surface=screen)
 
 
     for g in ghosts:
-        g.update(player)
+        g.update(player, dt)
     for i in range(len(ghosts)):
         for j in range(i + 1, len(ghosts)):
             g1 = ghosts[i]
             g2 = ghosts[j]
 
-            r1 = pygame.Rect(
-                g1.x - g1.size // 2,
-                g1.y - g1.size // 2,
-                g1.size,
-                g1.size
-            )
-            r2 = pygame.Rect(
-                g2.x - g2.size // 2,
-                g2.y - g2.size // 2,
-                g2.size,
-                g2.size
-            )
+            r1 = g1.rect
+            r2 = g2.rect
 
             if r1.colliderect(r2):
                 push = 6
@@ -206,17 +230,28 @@ while running:
                 fireball.alive = False
                 break
 
-        if fireball.is_dead(WIDTH) or not fireball.alive:
+        if fireball.is_dead():
             fireballs.remove(fireball)
+
 
     
     ghosts = [g for g in ghosts if g.alive]
 
 
+    camera_x = player.rect.centerx - WIDTH // 2
+    camera_y = player.rect.centery - HEIGHT // 2
 
 
-
+    # --- DRAW MAP ---
     screen.fill((20, 20, 20))
+    for r, row in enumerate(game_map):
+        for c, char in enumerate(row):
+            x = c * TILE_SIZE - camera_x
+            y = r * TILE_SIZE - camera_y
+            screen.blit(floor_tile, (x, y))
+            if char == "W":
+                screen.blit(wall_tile, (x, y))
+
     if player.dead:
         overlay = pygame.Surface((WIDTH, HEIGHT))
         overlay.fill((0, 0, 0, 160))
@@ -234,13 +269,14 @@ while running:
         continue
 
 
-    player.draw(screen)
+    player.draw(screen, (camera_x, camera_y))
+
     for fireball in fireballs:
-        fireball.draw(screen)
+        fireball.draw(screen, (camera_x, camera_y))
 
 
     for g in ghosts:
-        g.draw(screen)
+        g.draw(screen, (camera_x, camera_y))
 
 
     # --- HEALTH BAR ---

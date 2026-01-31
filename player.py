@@ -74,12 +74,15 @@ class Dust:
         self.y += self.vy
         self.life -= 1
 
-    def draw(self, surface):
+    def draw(self, surface, camera_offset):
         if self.life > 0:
+            cx, cy = camera_offset
             pygame.draw.circle(
                 surface, DUST_COLOR,
-                (int(self.x), int(self.y)), self.size
+                (int(self.x - cx), int(self.y - cy)),
+                self.size
             )
+
 
 
 # =====================
@@ -88,7 +91,9 @@ class Dust:
 class Player:
     def __init__(self, x, y):
         self.dead = False
-        self.rect = pygame.Rect(x - 20, y - 50, 40, 105)
+        self.rect = pygame.Rect(0, 0, 40, 105)
+        self.rect.center = (x, y)
+
 
         self.masks = {
             "theyyam": {"speed": 400},
@@ -166,11 +171,14 @@ class Player:
         self.health_bar = HealthBar(100)
         self.dead = False
 
-        self.velocity_x = 0
-        self.velocity_y = 0
+        self.vx = 0
+        self.vy = 0
+        self.move_vx = 0
+        self.move_vy = 0
 
         self.sword_swinging = False
         self.fireball_timer = 0
+
 
 
     # -----------------
@@ -429,7 +437,7 @@ class Player:
         y = self.rect.y - cy
 
         for d in self.dust_particles:
-            d.draw(screen)
+            d.draw(screen, (cx, cy))
 
         # --- BODY ---
         if self.view == "FRONT":
@@ -486,6 +494,11 @@ class Player:
             rotated = pygame.transform.rotate(sword_img, self.sword_angle)
             offset_x = 22 if self.facing == 1 else -22
             rect = rotated.get_rect(
-                center=(self.rect.centerx + offset_x, self.rect.centery)
+                center=(
+                    self.rect.centerx + offset_x - cx,
+                    self.rect.centery - cy
+                )
             )
             screen.blit(rotated, rect)
+
+

@@ -32,15 +32,17 @@ class Fireball:
 
         self.lifetime -= dt
 
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
+    def draw(self, screen, camera_offset):
+        cx, cy = camera_offset
 
-        # 🔍 DEBUG HITBOX (uncomment if needed)
-        pygame.draw.rect(screen, (0, 255, 0), self.hitbox, 1)
+        draw_rect = self.rect.move(-cx, -cy)
+        screen.blit(self.image, draw_rect)
 
-    def is_dead(self, screen_width):
-        return (
-            self.lifetime <= 0
-            or self.hitbox.right < 0
-            or self.hitbox.left > screen_width
-        )
+        # 🔍 DEBUG HITBOX (camera-based)
+        debug_rect = self.hitbox.move(-cx, -cy)
+        pygame.draw.rect(screen, (0, 255, 0), debug_rect, 1)
+
+
+    def is_dead(self):
+        return self.lifetime <= 0 or not self.alive
+
