@@ -2,6 +2,8 @@ import pygame
 import sys
 from player import Player, BAR_WIDTH, BAR_HEIGHT
 import math
+from map_loader import MapLoader
+
 
 
 
@@ -10,6 +12,7 @@ import math
 pygame.init()
 
 font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 25)  
+game_map = MapLoader("assets/maps/haunted_castel.tmx")
 
 
 # Create window
@@ -64,7 +67,11 @@ mask_order = ["theyyam", "bhairava", "kali"]
 
 clock = pygame.time.Clock()
 FPS = 60
-player = Player(WIDTH // 2, HEIGHT // 2)
+spawn_x, spawn_y = game_map.player_spawn
+player = Player(spawn_x, spawn_y)
+camera_x = 0
+camera_y = 0
+
 
 # Main loop
 running = True
@@ -104,18 +111,39 @@ while running:
                     player.sword_swinging = True
                     player.sword_timer = player.sword_duration
                     if player.facing == 1:
-                        player.sword_angle = 30
+                        player.sword_angle = 90
                     else:  # facing left
-                        player.sword_angle = -45
+                        player.sword_angle = -105
 
 
 
     # Fill screen with a color
-    screen.fill((30, 30, 30))
+    game_map.draw(screen, (camera_x, camera_y))
+
 
     keys = pygame.key.get_pressed()
-    player.update(keys, dt)
-    player.draw(screen)
+    player.update(keys, dt, game_map.walls)
+
+    for wall in game_map.walls:
+        if player.rect.colliderect(wall):
+            # Simple pushback
+            if player.facing == 1:
+                player.rect.right = wall.left
+            elif player.facing == -1:
+                player.rect.left = wall.right
+
+
+    player.draw(screen, camera_offset=(camera_x, camera_y))
+
+
+    #camera
+    camera_x = player.rect.centerx - WIDTH // 2
+    camera_y = player.rect.centery - HEIGHT // 2
+
+    # Clamp camera to map bounds
+    camera_x = max(0, min(camera_x, game_map.map_width - WIDTH))
+    camera_y = max(0, min(camera_y, game_map.map_height - HEIGHT))
+
 
     # --- DRAW MASK WHEEL UI ---
     center_x = WIDTH // 2

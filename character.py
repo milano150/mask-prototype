@@ -20,7 +20,7 @@ BOOT_COLOR = (45, 30, 20)
 DUST_COLOR = (200, 200, 200)
 GOLD, RED, BLUE, YELLOW = (218, 165, 32), (200, 0, 0), (30, 60, 180), (255, 215, 0)
 
-MASKS = ["None", "Guardian", "Bhairava", "Kaali"]
+MASKS = ["None", "Theyyam", "Bhairava", "Kali"]
 
 class Dust:
     def __init__(self, x, y):
@@ -70,8 +70,8 @@ class Player:
 
     def draw_mask_head(self, surface, x, y, mask_type, view):
         mx, my = x, y + 5
-        base_c = GOLD if mask_type == "Guardian" else RED if mask_type == "Bhairava" else (192, 192, 192)
-        face_c = RED if mask_type == "Guardian" else YELLOW if mask_type == "Bhairava" else BLUE
+        base_c = GOLD if mask_type == "Theyyam" else RED if mask_type == "Bhairava" else (192, 192, 192)
+        face_c = RED if mask_type == "Theyyam" else YELLOW if mask_type == "Bhairava" else BLUE
         
         if view == "FRONT":
             pygame.draw.circle(surface, base_c, (mx, my), 28, draw_top_left=True, draw_top_right=True)
@@ -98,7 +98,7 @@ class Player:
         for d in self.dust_particles: d.draw(surface)
 
         current_mask = MASKS[self.mask_index]
-        mask_face_color = RED if current_mask == "Guardian" else YELLOW if current_mask == "Bhairava" else BLUE
+        mask_face_color = RED if current_mask == "Theyyam" else YELLOW if current_mask == "Bhairava" else BLUE
         active_hair_color = mask_face_color if current_mask != "None" else BEARD_BROWN
 
         # --- DRAWING BY VIEW ---
