@@ -91,21 +91,40 @@ class Dust:
 class Player:
     def __init__(self, x, y):
         self.dead = False
-        self.rect = pygame.Rect(0, 0, 36, 60)
-        self.rect.center = (x, y)
+        self.rect = pygame.Rect(0, 0, 28, 34)
+        self.rect.center = (x+3, y)
         self.fire_dir_x = 1
         self.fire_dir_y = 0
+        self.charge_sword_rect = None
+
+        
+        self.stunned = False
+        self.stun_timer = 0.0
+
+        self.stun_cooldown = 0.0
+        self.STUN_COOLDOWN_TIME = 2  # seconds (tweak: 1.0–2.5)
+        self.stun_text_timer = 0.0
+
+
+        self.health_flash_timer = 0.0
+        self.health_flash_duration = 0.35
+        self.health_shake_timer = 0.0
+
+
+
+        
 
 
 
         self.masks = {
-            "theyyam": {"speed": 400},
+            "theyyam": {"speed": 300},
             "garuda": {"speed": 700},
             "kali": {"speed": 400},
         }
 
         self.mask_switch_cd = 0.0
         self.mask_switch_delay = 1.2  # seconds
+        
 
 
 
@@ -132,7 +151,7 @@ class Player:
         self.last_attack = 0
 
 
-        # Sword (Kali)
+        # KALI SPACE
         self.sword_img = pygame.image.load("assets/sword.png").convert_alpha()
         self.sword_img = pygame.transform.scale(
             self.sword_img,
@@ -144,6 +163,16 @@ class Player:
         self.sword_swinging = False
         self.sword_timer = 0
         self.sword_duration = 12
+
+        # KALI Q
+
+        self.charging = False
+        self.charge_dir = 1
+        self.charge_speed = 900
+        self.charge_duration = 0.18
+        self.charge_timer = 0
+        self.charge_cooldown = 1.2
+        self.charge_cd = 0
 
         # --- physics / knockback (velocity-based, decays over time) ---
         # vx/vy: knockback velocity in pixels/second applied on top of player input
@@ -182,6 +211,17 @@ class Player:
         self.sword_swinging = False
         self.fireball_timer = 0
 
+    def stun(self, duration):
+        # ❌ if already stunned or immune, do nothing
+        if self.stunned or self.stun_cooldown > 0:
+            return
+
+        self.stunned = True
+        self.stun_timer = duration
+
+        # text trigger
+        self.stun_text_timer = 1.2
+
 
 
     # -----------------
@@ -215,6 +255,25 @@ class Player:
 
         self.fireball_timer = self.fireball_cooldown
         return fireball
+    def start_charge(self):
+        self.charging = True
+        self.charge_timer = self.charge_duration
+        self.charge_cd = self.charge_cooldown
+        self.charge_dir = self.facing
+
+
+    def update_charge(self, dt):
+        if not self.charging:
+            return
+
+        self.charge_timer -= dt
+        self.rect.x += self.charge_dir * self.charge_speed * dt
+
+        if self.charge_timer <= 0:
+            self.charging = False
+
+
+    
 
 
 
@@ -222,8 +281,15 @@ class Player:
 
     def take_damage(self, amount):
         self.health_bar.take_damage(amount)
+
+        # 🔴 damage feedback
+        self.health_flash_timer = self.health_flash_duration
+        self.health_shake_timer = 0.18
+
         if self.health_bar.current_step >= TOTAL_FRAMES - 1:
             self.dead = True
+
+
     def sword_attack(self, ghosts, debug_surface=None):
         now = pygame.time.get_ticks()
         if now - self.last_attack < self.attack_cooldown:
@@ -260,6 +326,32 @@ class Player:
     def update(self, keys, dt):
         if self.dead:
             return
+        # ⛔ STUN LOGIC
+        # ⛔ STUN COOLDOWN TIMER
+        if self.stun_cooldown > 0:
+            self.stun_cooldown -= dt
+        if self.health_flash_timer > 0:
+            self.health_flash_timer -= dt
+        if self.health_shake_timer > 0:
+            self.health_shake_timer -= dt
+
+
+        if self.stunned:
+            self.stun_timer -= dt
+            if self.stun_timer <= 0:
+                self.stunned = False
+                self.stun_cooldown = self.STUN_COOLDOWN_TIME  # ✅ START cooldown here
+            return  # completely block movement & actions
+        
+        if self.stun_text_timer > 0:
+            self.stun_text_timer -= dt
+
+
+        if self.charge_cd > 0:
+            self.charge_cd -= dt
+
+        if self.charging:
+            self.update_charge(dt)
 
         dx = dy = 0
         moving = False
@@ -356,7 +448,7 @@ class Player:
                 self.fireball_timer = 0
 
 
-
+        
 
 
         # Sword animation
@@ -450,6 +542,33 @@ class Player:
 
     def get_rect(self):
         return self.rect
+    
+    def draw_charge_sword(self, surface, camera_offset):
+        cam_x, cam_y = camera_offset
+
+        # Match player sprite offset
+        cx = self.rect.centerx
+        cy = self.rect.centery - 30
+
+        # Rotation based on dash direction
+        if self.charge_dir == 1:      # charging right
+            angle = 35
+        else:                         # charging left
+            angle = -145
+
+        sword = pygame.transform.rotate(self.sword_img, angle)
+
+        # SCREEN-SPACE rect
+        rect = sword.get_rect(center=(cx - cam_x, cy - cam_y))
+
+        surface.blit(sword, rect)
+
+        # 🔥 STORE WORLD-SPACE HITBOX
+        self.charge_sword_rect = rect.move(cam_x, cam_y)
+
+
+
+
 
 
     # -----------------
@@ -528,7 +647,7 @@ class Player:
             rect = rotated.get_rect(
                 center=(
                     self.rect.centerx + offset_x - cx,
-                    self.rect.centery - cy
+                    self.rect.centery - cy - 30
                 )
             )
             screen.blit(rotated, rect)

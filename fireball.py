@@ -37,13 +37,13 @@ class Fireball:
 
 
         # Hitbox (small & fair)
-        self.hitbox = pygame.Rect(0, 0, 28, 28)
+        self.hitbox = pygame.Rect(0, 0, 16, 16)
         self.hitbox.center = (x, y)
 
         # Visual rect
         self.rect = self.image.get_rect(center=(x, y))
 
-    def update(self, dt):
+    def update(self, dt, walls):
         dx = self.vx * dt
         dy = self.vy * dt
 
@@ -53,6 +53,12 @@ class Fireball:
         self.hitbox.y += dy
 
         self.lifetime -= dt
+
+        # 🧱 WALL COLLISION
+        for wall in walls:
+            if self.hitbox.colliderect(wall):
+                self.alive = False
+                return
 
     def draw(self, screen, camera_offset):
         cx, cy = camera_offset

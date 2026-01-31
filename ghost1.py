@@ -30,6 +30,14 @@ class Ghost:
         
         self.speed = 50
         self.size = 32
+        # --- collision rect (must exist immediately) ---
+        self.rect = pygame.Rect(
+            self.x - self.size // 2,
+            self.y - self.size // 2,
+            self.size,
+            self.size
+        )
+
         self.direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
         self.change_dir_timer = 0
         
@@ -202,11 +210,17 @@ class Ghost:
         surface.blit(ghost_surf, (tx, ty))
 
     def hit_player(self, player):
+        # ⚡ GARUDA STUN
+        if player.current_mask == "garuda":
+            player.stun(3.0)  # 3 seconds stun
+
         # Damage
         player.take_damage(self.damage)
 
-        # Apply realistic, velocity-based knockback (player handles decay & stun)
-        player.apply_knockback(self.x, self.y, self.knockback, stun_time=0.18)
+        # Knockback (small hit-stun only)
+        if not player.stunned:
+            player.apply_knockback(self.x, self.y, self.knockback, stun_time=0.18)
+
 
 
 
