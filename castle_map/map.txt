@@ -1,6 +1,6 @@
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
-WW..................W........B.....W.....W.........D
+WW..................W........B.....W.....W..........
 WW..................W..............W.....W........WW
 WW..........WWWW....W...W..........W.....W........WW
 WW.............W........W..........W.....W....WWWWWW
@@ -9,5 +9,5 @@ WW.............W........W.....................W...WW
 WW.............WT.......WWWWWWWWWWWWW.........W...WW
 WW..................................W.............WW
 WWB...............................W............B..WW
-WWWWWWWWWWWWWWWWWWWWWWWWWWDWWWWWWWWWWWWWWWWWWWWWWWWW
-WWWWWWWWWWWWWWWWWWWWWWWWWWDWWWWWWWWWWWWWWWWWWWWWWWWW
+WWWWWWWWWWWWWWWWWWWWWWWWW.WWWWWWWWWWWWWWWWWWWWWWWWWW
+WWWWWWWWWWWWWWWWWWWWWWWWWDWWWWWWWWWWWWWWWWWWWWWWWWWW
