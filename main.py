@@ -2,11 +2,16 @@ import pygame
 import sys
 from player import Player, BAR_WIDTH, BAR_HEIGHT
 import math
+from ghost1 import Ghost
 
 # Initialize pygame
 pygame.init()
+pygame.mixer.init()
+
 
 font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 25)
+death_font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 80)
+
 
 # Create window
 WIDTH, HEIGHT = 800, 600
@@ -53,6 +58,16 @@ FPS = 60
 
 player = Player(WIDTH // 2, HEIGHT // 2)
 
+ghosts = []
+fireballs = []
+ghosts.append(Ghost(WIDTH, HEIGHT))
+
+MAX_GHOSTS = 6
+SPAWN_DELAY = 5000
+spawn_timer = 0
+
+
+
 # Main loop
 running = True
 while running:
@@ -61,6 +76,13 @@ while running:
 
     if mask_name_timer > 0:
         mask_name_timer -= dt
+
+    spawn_timer += dt * 1000  # convert to ms
+
+    if len(ghosts) < MAX_GHOSTS and spawn_timer >= SPAWN_DELAY:
+        ghosts.append(Ghost(WIDTH, HEIGHT))
+        spawn_timer = 0
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -82,24 +104,108 @@ while running:
                 wheel_target = mask_order.index(player.current_mask)
                 mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
 
-            if event.key == pygame.K_SPACE:
-                player.shoot_fireball()
 
             if event.key == pygame.K_h:
                 player.take_damage(10)
 
             if event.key == pygame.K_SPACE:
-                if player.current_mask == "kali" and not player.sword_swinging:
-                    player.sword_swinging = True
-                    player.sword_timer = player.sword_duration
-                    player.sword_angle = 90 if player.facing == 1 else -105
+                # 🔥 Fireball (Theyyam)
+                if player.current_mask == "theyyam":
+                    fireball = player.shoot_fireball()
+                    if fireball:
+                        fireballs.append(fireball)
+
+                # ⚔️ Sword (Kali)
+                elif player.current_mask == "kali":
+                    if not player.sword_swinging:
+                        player.sword_swinging = True
+                        player.sword_timer = player.sword_duration
+                        player.sword_angle = 90 if player.facing == 1 else -105
+
 
     keys = pygame.key.get_pressed()
     player.update(keys, dt)
+    # ⚔️ Sword damage + debug during swing
+    if player.current_mask == "kali" and player.sword_swinging:
+        player.sword_attack(ghosts, debug_surface=screen)
+
+
+    for g in ghosts:
+        g.update(player)
+    for i in range(len(ghosts)):
+        for j in range(i + 1, len(ghosts)):
+            g1 = ghosts[i]
+            g2 = ghosts[j]
+
+            r1 = pygame.Rect(
+                g1.x - g1.size // 2,
+                g1.y - g1.size // 2,
+                g1.size,
+                g1.size
+            )
+            r2 = pygame.Rect(
+                g2.x - g2.size // 2,
+                g2.y - g2.size // 2,
+                g2.size,
+                g2.size
+            )
+
+            if r1.colliderect(r2):
+                push = 6
+                g1.apply_knockback(g2.x, g2.y, push)
+                g2.apply_knockback(g1.x, g1.y, push)
+
+
+    for fireball in fireballs[:]:
+        fireball.update(dt)
+
+        for ghost in ghosts:
+            if ghost.alive and fireball.hitbox.colliderect(ghost.rect):
+                ghost.take_damage(fireball.damage)
+
+                # 🔥 FIREBALL KNOCKBACK
+                ghost.apply_knockback(
+                    fireball.hitbox.centerx,
+                    fireball.hitbox.centery,
+                    14  # fireball knockback force
+                )
+
+                fireball.alive = False
+                break
+
+        if fireball.is_dead(WIDTH) or not fireball.alive:
+            fireballs.remove(fireball)
+
+    
+    ghosts = [g for g in ghosts if g.alive]
+
+
+
+
 
     screen.fill((20, 20, 20))
+    if player.dead:
+        overlay = pygame.Surface((WIDTH, HEIGHT))
+        overlay.fill((0, 0, 0))
+        overlay.set_alpha(180)
+        screen.blit(overlay, (0, 0))
+
+        text = death_font.render("YOU DIED", True, (200, 0, 0))
+        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(text, rect)
+
+        pygame.display.flip()
+        continue
+
 
     player.draw(screen)
+    for fireball in fireballs:
+        fireball.draw(screen)
+
+
+    for g in ghosts:
+        g.draw(screen)
+
 
     # --- HEALTH BAR ---
     bar_rect = player.health_bar.get_frame_rect()
