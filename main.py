@@ -42,7 +42,7 @@ def run_game(screen):
     pygame.display.set_caption("Mask Game")
 
     # --- LOAD CASTLE MAP ---
-    game_map, walls, spawn = load_castle()
+    game_map, walls, interactables, items, spawn, assets = load_castle()
 
     # --- LOAD MAP TILES ---
     castle_sheet = SpriteSheet("maps/castle.png")
