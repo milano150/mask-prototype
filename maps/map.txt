@@ -1,13 +1,13 @@
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
-WW..................W........B.....W.....W..........
+WW..................W........B.....W.....W.........D
 WW..................W..............W.....W........WW
 WW..........WWWW....W...W..........W.....W........WW
-WH....S........W........W..........W.....W....WWWWWW
+WH.............W........W..........W.....W....WWWWWW
 WW.........P...W........W................W....W...WW
 WW.............W........W.....................W...WW
 WW.............W........WWWWWWWWWWWWW.........W...WW
-WW.........A......B........P........W.............WW
-WWB..X............................W............B..WW
+WW................B........P........W.............WW
+WWB...............................W............B..WW
 WWWWWWWWWWWWWWWWWWWWWWWWW.WWWWWWWWWWWWWWWWWWWWWWWWWW
 WWWWWWWWWWWWWWWWWWWWWWWWWDWWWWWWWWWWWWWWWWWWWWWWWWWW
