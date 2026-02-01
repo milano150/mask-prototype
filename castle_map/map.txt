@@ -1,13 +1,22 @@
-WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
-WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
-WW..................W........B.....W.....W..........
-WW..................W..............W.....W........WW
-WW..........WWWW....W...W..........W.....W........WW
-WW.............W........W..........W.....W....WWWWWW
-WW.........P...W........W................W....W...WW
-WW.............W........W.....................W...WW
-WW.............WT.......WWWWWWWWWWWWW.........W...WW
-WW..................................W.............WW
-WWB...............................W............B..WW
-WWWWWWWWWWWWWWWWWWWWWWWWW.WWWWWWWWWWWWWWWWWWWWWWWWWW
-WWWWWWWWWWWWWWWWWWWWWWWWWDWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+                    WWWWWWWWWWWW           
+                 WW..............WW        
+               WW...WWWW....WWWW...WW     
+              W.....WWWW....WWWW.....W     
+             W........................W    
+             W............P...........W    
+             W........................W    
+             W..........WWWW..........W    
+             W..........W..W..........W    
+             W..........W..W..........W    
+             WW....B....WWWW.........WW    
+              WW....................WW     
+               WW..................WW      
+             W....................W      
+             W...WW..........WW...W      
+              W.....WW......WW.....W      
+              W.......WWWWWW.......W      
+              WW..................WW      
+                WW..............WW        
+                  WWWWWWWWWWWWWW          
+    
