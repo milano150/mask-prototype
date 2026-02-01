@@ -1,0 +1,131 @@
+# 🕯️ MUKHA TEJAH
+
+### A myth-powered survival horror where switching ancient masks is the only way to stay alive.
+
+---
+
+## 🎯 Problem Statement
+
+Most horror games rely on jump scares or repetitive combat. Very few focus on **strategic decision-making under pressure**, and even fewer integrate **Indian mythology as a core gameplay mechanic** rather than just visual flavor.
+
+Players often want meaningful choices, cultural depth, and mechanics that force real trade-offs. This project explores exactly that.
+
+---
+
+## 💡 Solution Overview
+
+**Mukha Tejah** is a top-down survival horror game built using **Pygame and Python**, where the player wears mythological masks—each granting a powerful ability along with a dangerous limitation.
+
+The player must **constantly switch masks in real time** to adapt, survive, and outthink incoming ghosts.
+
+**The game turns mythology into a live combat strategy system.**
+
+---
+
+## 🎮 Gameplay Overview
+
+- Play as a masked warrior trapped in a haunted realm
+- Ghosts continuously spawn and hunt the player
+- Survival depends on switching between different mythological masks
+- Each mask offers a powerful ability but introduces a critical weakness
+- Poor decisions lead to instant death
+
+**Win Condition:** Survive the ghost waves  
+**Lose Condition:** Getting overwhelmed due to wrong mask choice
+
+---
+
+## 🧿 Core Mechanic: The Mask System
+
+The central mechanic of the game is **real-time mask switching**, inspired by Indian mythological figures.  
+Each mask enforces **risk vs reward gameplay**, ensuring no ability is overpowered.
+
+---
+
+### 🔥 Theyyam Mask
+
+- **Power:** Fire throwing attack 
+- **Strength:** Effective against a ghost
+- **Disability:** Low movement speed
+
+Best used for crowd control, but dangerous when mobility is required.
+
+---
+
+### 🦅 Garudan Mask
+
+- **Power:** Extreme movement speed
+- **Strength:** Ideal for escaping and repositioning
+- **Disability:** If a ghost touches the player, they get stunned and cannot move temporarily
+
+High-risk mobility—speed saves you, but one mistake can be fatal.
+
+---
+
+### ⚔️ Kali Mask
+
+- **Power:** Sword combat; enemies die in strike and double attack is possible
+- **Strength:** Extremely powerful close-range attacks 
+- **Disability:** Low visibility range
+
+Deadly but terrifying—what you cannot see can kill you.
+
+---
+
+## 🔄 Strategic Gameplay Loop
+
+1. Ghosts approach the player  
+2. Player evaluates the threat  
+3. Mask is switched based on the situation  
+4. Ability is used  
+5. Weakness must be managed  
+6. Loop continues under increasing pressure  
+
+There is no perfect mask—only perfect decisions.
+
+---
+
+## 🛠️ Tech Stack
+
+### Game Engine
+- Pygame
+
+### Programming Language
+- Python
+
+### Systems Implemented
+- Real-time mask switching
+- Enemy and ghost movement
+- Collision-based abilities
+- Status effects (stun, speed reduction, visibility limitation)
+- Survival-based progression
+
+### Tools
+- Python
+- Pygame
+- GitHub
+
+---
+
+## 🧠 Design & Architecture Decisions
+
+- Pygame was chosen for rapid prototyping and full control over game mechanics
+- The mask system is modular, allowing easy expansion
+- Every power includes a meaningful disability to enforce balance
+- Visual simplicity was prioritized to focus on gameplay depth
+
+Smart trade-offs were made to deliver a complete and playable prototype within hackathon time constraints.
+
+---
+
+## 🚀 Hackathon Readiness
+
+- ⏱️ Built within a strict hackathon time limit
+- 👥 Team size: 4
+- 🎮 Fully playable end-to-end prototype
+- 🧠 Clear innovation in core gameplay
+- 🔁 Replayable survival experience
+
+---
+
+
