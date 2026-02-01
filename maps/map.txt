@@ -3,11 +3,11 @@ WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 WW..................W........B.....W.....W..........
 WW..................W..............W.....W........WW
 WW..........WWWW....W...W..........W.....W........WW
-WW.............W........W..........W.....W....WWWWWW
+WH....S........W........W..........W.....W....WWWWWW
 WW.........P...W........W................W....W...WW
 WW.............W........W.....................W...WW
-WW.............WT.......WWWWWWWWWWWWW.........W...WW
-WW..................................W.............WW
-WWB...............................W............B..WW
+WW.............W........WWWWWWWWWWWWW.........W...WW
+WW.........A......B........P........W.............WW
+WWB..X............................W............B..WW
 WWWWWWWWWWWWWWWWWWWWWWWWW.WWWWWWWWWWWWWWWWWWWWWWWWWW
 WWWWWWWWWWWWWWWWWWWWWWWWWDWWWWWWWWWWWWWWWWWWWWWWWWWW

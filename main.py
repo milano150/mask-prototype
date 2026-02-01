@@ -44,11 +44,6 @@ def run_game(screen):
     # --- LOAD CASTLE MAP ---
     game_map, walls, interactables, items, spawn, assets = load_castle()
 
-    # --- LOAD MAP TILES ---
-    castle_sheet = SpriteSheet("maps/castle.png")
-    cave_sheet = SpriteSheet("maps/cave.png")
-    wall_tile = castle_sheet.get_sprite(120, 60)
-    floor_tile = cave_sheet.get_sprite(16, 16)
 
 
     health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
@@ -231,8 +226,14 @@ def run_game(screen):
             keys = pygame.key.get_pressed()
             old_rect = player.rect.copy()
             player.update(keys, dt)
-            for wall in walls:
-                if player.rect.colliderect(wall):
+            
+            # --- NEW COLLISION LOGIC ---
+            item_rects = [i['rect'] for i in items]
+            door_rects = [o.rect for o in interactables if not o.is_open]
+            solids = walls + item_rects + door_rects
+            
+            for obj in solids:
+                if player.rect.colliderect(obj):
                     player.rect = old_rect
                     break
 
@@ -299,14 +300,54 @@ def run_game(screen):
 
 
         # --- DRAW MAP ---
+       # --- DRAW MAP ---
         screen.fill((20, 20, 20))
         for r, row in enumerate(game_map):
             for c, char in enumerate(row):
                 x = c * TILE_SIZE - camera_x
                 y = r * TILE_SIZE - camera_y
-                screen.blit(floor_tile, (x, y))
-                if char == "W":
-                    screen.blit(wall_tile, (x, y))
+                
+                # Performance check: only draw if on screen
+                if -TILE_SIZE*2 < x < WIDTH and -TILE_SIZE < y < HEIGHT:
+                    screen.blit(assets['floor'], (x, y))
+# --- Inside your drawing loop in main.py ---
+                    if char == "W":
+                     screen.blit(assets['wall'], (x, y))
+                    elif char == "2":
+                     screen.blit(assets['wall2'], (x, y))
+                    elif char == "A": # Barrel
+                     img = assets['barrel']
+                     screen.blit(img, (x + (TILE_SIZE - img.get_width()) // 2, y + (TILE_SIZE - img.get_height()) // 2))
+                    elif char == "B": # Bucket
+                         img = assets['bucket']
+                         screen.blit(img, (x + (TILE_SIZE - img.get_width()) // 2, y + (TILE_SIZE - img.get_height()) // 2))
+                    elif char == "H": # Window
+                       screen.blit(assets['window'], (x, y))
+                    elif char == "S": # Spearholder
+                       screen.blit(assets['spearholder'], (x, y))
+                    
+                    
+                    if char == "W":
+                        screen.blit(assets['wall'], (x, y))
+                    elif char == "2":
+                        screen.blit(assets['wall2'], (x, y))
+                    elif char == "H": # Window
+                        screen.blit(assets['window'], (x, y))
+                    elif char == "X": # Bridge
+                        screen.blit(assets['bridge'], (x, y + TILE_SIZE // 4))
+                    elif char == "A": # Barrel
+                        img = assets['barrel']
+                        screen.blit(img, (x + (TILE_SIZE - img.get_width())//2, y + (TILE_SIZE - img.get_height())//2))
+                    elif char == "B": # Bucket
+                        img = assets['bucket']
+                        screen.blit(img, (x + (TILE_SIZE - img.get_width())//2, y + (TILE_SIZE - img.get_height())//2))
+                    elif char == "T": # Torch
+                        img = assets['torch']
+                        screen.blit(img, (x + (TILE_SIZE - img.get_width())//2, y))
+                    elif char == "S": # Spear Holder
+                        img = assets['spearholder']
+                        screen.blit(img, (x + (TILE_SIZE - img.get_width())//2, y))
+                                     
 
         if player.dead:
             overlay = pygame.Surface((WIDTH, HEIGHT))
@@ -398,6 +439,11 @@ def run_game(screen):
 
         for g in ghosts:
             g.draw(screen, (camera_x, camera_y))
+            # --- DRAW & UPDATE DOORS ---
+        for obj in interactables:
+            obj.draw(screen, (camera_x, camera_y))
+            if not paused:
+                obj.update(dt)
 
         # 🌑 KALI BLINDNESS EFFECT (FIXED)
         if player.current_mask == "kali" and not player.dead:
