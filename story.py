@@ -12,12 +12,11 @@ WIDTH, HEIGHT = 800, 600
 FPS = 60
 SCENE_DURATION = 5  # seconds per scene (~40s total)
 
-# Screen/clock/font will be provided when the story is run inside a game or will be created when run standalone.
 screen = None
 clock = None
 font = None
 
-# Recording / helper flags
+# Recording helpers
 try:
     import imageio
     HAVE_IMAGEIO = True
@@ -30,22 +29,12 @@ WRITER = None
 FRAMES_DIR = None
 FRAME_COUNT = 0
 
-# ---------------- LOAD IMAGES ----------------
+# ---------------- IMAGE LOADER ----------------
 def load_img(path, size=None):
-    """Load an image and return a scaled surface. If file missing, return a placeholder surface."""
     full = path if os.path.isabs(path) else os.path.join(BASE_DIR, path)
     if not os.path.exists(full):
-        print(f"Warning: image not found: {path}")
-        # create placeholder surface
-        w, h = size if size else (100, 100)
-        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        surf = pygame.Surface(size if size else (100, 100))
         surf.fill((40, 40, 40))
-        try:
-            warn_font = pygame.font.Font(None, 20)
-            txt = warn_font.render("Missing: " + os.path.basename(path), True, (255, 60, 60))
-            surf.blit(txt, (8, 8))
-        except Exception:
-            pass
         return surf
 
     img = pygame.image.load(full).convert_alpha()
@@ -53,311 +42,230 @@ def load_img(path, size=None):
         img = pygame.transform.scale(img, size)
     return img
 
-# Scene definitions: paths are resolved and loaded when `run_story` is called (safer for importing from the main game)
+# ---------------- STORY SCENES ----------------
 scene_defs = [
-    {"bg": "assests_story/temple_bg.jpeg", "img": None, "text": "When the last temple fell silent, the land forgot its gods."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/ghost.png", "text": "From broken rituals, ghosts returned to claim the night."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/theyyam_pix_ui.png", "text": "Theyyam commands fire itself, but the flames slow his steps."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/garuda.png", "text": "Garudan moves faster than fear, yet a ghost’s touch freezes him."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/kali.png", "text": "Kali kills with one strike, but darkness steals her sight."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/ghost.png", "text": "Power was sealed, for every mask carried a deadly curse."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": None, "text": "Now the masks awaken once more… seeking a bearer."},
-    {"bg": "assests_story/forest_pix_ui.jpeg", "img": None, "text": "Wear the mask. Endure the curse. Survive the night."},
+    {"bg": "assests_story/temple_bg.jpeg", "img": None,
+     "text": "When the last temple fell silent, the land forgot its gods."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/ghost.png",
+     "text": "From broken rituals, ghosts returned to claim the night."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/theyyam_pix_ui.png",
+     "text": "Theyyam commands fire itself, but the flames slow his steps."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/garuda.png",
+     "text": "Garudan moves faster than fear, yet a ghost’s touch freezes him."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/kali.png",
+     "text": "Kali kills with one strike, but darkness steals her sight."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": "assests_story/ghost.png",
+     "text": "Power was sealed, for every mask carried a deadly curse."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": None,
+     "text": "Now the masks awaken once more… seeking a bearer."},
+
+    {"bg": "assests_story/forest_pix_ui.jpeg", "img": None,
+     "text": "Wear the mask. Endure the curse. Survive the night."},
 ]
 
-
-def load_scene_assets(width, height):
-    """Load surfaces for all scene definitions and return scenes list.
-    This ensures pygame is initialized before we attempt to load images or create fonts.
-    """
+def load_scene_assets():
     scenes = []
-    for sd in scene_defs:
-        bg = load_img(sd["bg"], (width, height))
-        img = load_img(sd["img"]) if sd["img"] else None
-        scenes.append({"bg": bg, "img": img, "text": sd["text"]})
+    for s in scene_defs:
+        bg = load_img(s["bg"], (WIDTH, HEIGHT))
+        img = load_img(s["img"]) if s["img"] else None
+        scenes.append({"bg": bg, "img": img, "text": s["text"]})
     return scenes
 
-# ---------------- DIALOG BOX ----------------
-def draw_dialog_box(text):
-    box_height = 140
-    box = pygame.Surface((WIDTH, box_height))
-    box.set_alpha(200)
-    box.fill((0, 0, 0))
-    screen.blit(box, (0, HEIGHT - box_height))
-
-    wrapped = wrap_text(text, font, WIDTH - 80)
-    y = HEIGHT - box_height + 30
-    for line in wrapped:
-        render = font.render(line, True, (230, 230, 230))
-        screen.blit(render, (40, y))
-        y += 28
-
+# ---------------- UI HELPERS ----------------
 def wrap_text(text, font, max_width):
     words = text.split(" ")
-    lines = []
-    current = ""
-
-    for word in words:
-        test = current + word + " "
+    lines, current = [], ""
+    for w in words:
+        test = current + w + " "
         if font.size(test)[0] <= max_width:
             current = test
         else:
             lines.append(current)
-            current = word + " "
+            current = w + " "
     lines.append(current)
     return lines
 
-# ---------------- FADE IN ----------------
+def draw_dialog_box(text):
+    box = pygame.Surface((WIDTH, 140))
+    box.set_alpha(200)
+    box.fill((0, 0, 0))
+    screen.blit(box, (0, HEIGHT - 140))
 
-def run_story(screen_arg=None, clock_arg=None, record_file=None, width=WIDTH, height=HEIGHT, fps=FPS, scene_duration=SCENE_DURATION):
-    """Run the story. If `screen_arg` and `clock_arg` are provided, use them (allow embedding inside an existing pygame app).
-    If not provided, create a temporary display and quit it when finished.
-    Returns when story completes or when user quits.
-    """
-    global screen, clock, font, RECORD_FILE, WRITER, FRAMES_DIR, FRAME_COUNT
+    y = HEIGHT - 110
+    for line in wrap_text(text, font, WIDTH - 80):
+        txt = font.render(line, True, (230, 230, 230))
+        screen.blit(txt, (40, y))
+        y += 28
 
-    created_display = False
-
-    # Setup display/clock/font
-    if screen_arg is None:
-        screen = pygame.display.set_mode((width, height))
-        pygame.display.set_caption("Mukha Tejah - Story")
-        created_display = True
+# ---------------- RECORD FRAME ----------------
+def capture_frame():
+    global FRAME_COUNT
+    if not RECORD_FILE:
+        return
+    arr = pygame.surfarray.array3d(screen).swapaxes(0, 1)
+    if HAVE_IMAGEIO and WRITER:
+        WRITER.append_data(arr)
     else:
-        screen = screen_arg
+        pygame.image.save(screen, f"{FRAMES_DIR}/frame_{FRAME_COUNT:06d}.png")
+        FRAME_COUNT += 1
 
-    clock = clock_arg if clock_arg is not None else pygame.time.Clock()
-    if font is None:
-        font = pygame.font.Font(None, 30)
+# ---------------- INTRO SCREENS ----------------
+def show_powered_by_banner(seconds=2):
+    title_font = pygame.font.Font(None, 36)
+    team_font = pygame.font.Font(None, 56)
+    start = time.time()
 
-    # Recording setup
+    while time.time() - start < seconds:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill((0, 0, 0))
+        t1 = title_font.render("powered by", True, (200, 200, 200))
+        t2 = team_font.render("TEAM VECTRA", True, (255, 255, 255))
+
+        screen.blit(t1, (WIDTH//2 - t1.get_width()//2, HEIGHT//2 - 60))
+        screen.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2))
+
+        pygame.display.update()
+        capture_frame()
+        clock.tick(FPS)
+
+def show_logo_animation(logo_img, seconds=2.5):
+    start = time.time()
+    while time.time() - start < seconds:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill((0, 0, 0))
+        pulse = 1 + 0.05 * math.sin((time.time() - start) * 6)
+        w = int(logo_img.get_width() * pulse)
+        h = int(logo_img.get_height() * pulse)
+
+        logo = pygame.transform.smoothscale(logo_img, (w, h))
+        screen.blit(logo, (WIDTH//2 - w//2, HEIGHT//2 - h//2))
+
+        pygame.display.update()
+        capture_frame()
+        clock.tick(FPS)
+
+def fade_in():
+    fade = pygame.Surface((WIDTH, HEIGHT))
+    fade.fill((0, 0, 0))
+    for a in range(255, -1, -8):
+        fade.set_alpha(a)
+        screen.blit(fade, (0, 0))
+        pygame.display.update()
+        capture_frame()
+        clock.tick(FPS)
+
+# ---------------- MAIN STORY ----------------
+def run_story(record_file=None):
+    global screen, clock, font, RECORD_FILE, WRITER, FRAMES_DIR
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Mukha Tejah – Story")
+    clock = pygame.time.Clock()
+    font = pygame.font.Font(None, 30)
+
     RECORD_FILE = record_file
-    WRITER = None
-    FRAMES_DIR = None
-    FRAME_COUNT = 0
-    if RECORD_FILE:
-        if HAVE_IMAGEIO:
-            WRITER = imageio.get_writer(RECORD_FILE, fps=fps)
-            print(f"Recording enabled — writing to: {RECORD_FILE}")
-        else:
-            FRAMES_DIR = os.path.join(BASE_DIR, "story_frames")
-            os.makedirs(FRAMES_DIR, exist_ok=True)
-            FRAME_COUNT = 0
-            print(f"imageio not available — saving frames to: {FRAMES_DIR}")
+    if RECORD_FILE and HAVE_IMAGEIO:
+        WRITER = imageio.get_writer(RECORD_FILE, fps=FPS)
 
-    # Load assets now that pygame is initialized
-    scenes = load_scene_assets(width, height)
+    scenes = load_scene_assets()
 
-    # Prepare 'powered by' logo if available
+    # Load VECTRA/logo image robustly (check title_heading_ui then assests_ui)
     def find_logo_path():
-        # Check title_heading_ui first
-        try:
-            th_dir = os.path.join(BASE_DIR, "assests_ui", "title_heading_ui")
-            if os.path.isdir(th_dir):
-                for f in os.listdir(th_dir):
-                    if any(f.lower().endswith(ext) for ext in ('.png', '.jpg', '.jpeg')):
-                        return os.path.join("assests_ui", "title_heading_ui", f)
-        except Exception:
-            pass
-        # Fallback: search top-level assests_ui for a file containing 'logo'
-        try:
-            ui_dir = os.path.join(BASE_DIR, "assests_ui")
+        # 1) check title_heading_ui folder
+        th_dir = os.path.join(BASE_DIR, "assests_ui", "title_heading_ui")
+        if os.path.isdir(th_dir):
+            for f in os.listdir(th_dir):
+                if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    return os.path.join("assests_ui", "title_heading_ui", f)
+        # 2) search top-level assests_ui for a file containing 'logo' or 'vectra'
+        ui_dir = os.path.join(BASE_DIR, "assests_ui")
+        if os.path.isdir(ui_dir):
             for f in os.listdir(ui_dir):
-                if 'logo' in f.lower() and any(f.lower().endswith(ext) for ext in ('.png', '.jpg', '.jpeg')):
+                if f.lower().endswith(('.png', '.jpg', '.jpeg')) and (
+                    'logo' in f.lower() or 'vectra' in f.lower()
+                ):
                     return os.path.join("assests_ui", f)
-        except Exception:
-            pass
         return None
 
     logo_path = find_logo_path()
     logo_img = None
     if logo_path:
-        # scale logo to fit about 40% of width
         logo_img = load_img(logo_path)
-        # maintain aspect and limit size
-        lw = min(int(width * 0.4), logo_img.get_width())
-        lh = int(lw * logo_img.get_height() / logo_img.get_width()) if logo_img.get_width() else lw
-        logo_img = pygame.transform.smoothscale(logo_img, (lw, lh))
+        # ensure logo has valid size and scale to ~40% width
+        if logo_img and logo_img.get_width() > 0:
+            max_w = int(WIDTH * 0.4)
+            lw = min(max_w, logo_img.get_width())
+            lh = int(lw * logo_img.get_height() / logo_img.get_width()) if logo_img.get_width() else lw
+            try:
+                logo_img = pygame.transform.smoothscale(logo_img, (lw, lh))
+            except Exception:
+                # keep original if scaling fails
+                pass
 
-    def capture_frame():
-        """Save or append the current screen to the writer or frames dir (if recording)."""
-        global FRAME_COUNT
-        if not RECORD_FILE:
-            return
-        try:
-            arr = pygame.surfarray.array3d(screen).swapaxes(0, 1)
-            if HAVE_IMAGEIO and WRITER:
-                WRITER.append_data(arr)
-            else:
-                fname = os.path.join(FRAMES_DIR, f"frame_{FRAME_COUNT:06d}.png")
-                pygame.image.save(screen, fname)
-                FRAME_COUNT += 1
-        except Exception as e:
-            print("Warning: failed to capture frame:", e)
-
-    # show a short intro 'powered by' animation if we have a logo
-    def show_powered_by(seconds=2.0):
-        if not logo_img:
-            return
-        start = time.time()
-        while time.time() - start < seconds:
-            for ev in pygame.event.get():
-                if ev.type == pygame.QUIT:
-                    if WRITER:
-                        WRITER.close()
-                    pygame.quit()
-                    sys.exit()
-            screen.fill((0, 0, 0))
-            # Powered by text
-            pfont = pygame.font.Font(None, 28)
-            text = pfont.render("powered by", True, (230, 230, 230))
-            tx = width // 2 - text.get_width() // 2
-            ty = height // 2 - logo_img.get_height() // 2 - 30
-            screen.blit(text, (tx, ty))
-            # logo with small pulse scale
-            t = (time.time() - start) * 2.0
-            pulse = 1.0 + 0.03 * math.sin(t * math.pi)
-            lw = int(logo_img.get_width() * pulse)
-            lh = int(logo_img.get_height() * pulse)
-            logo_scaled = pygame.transform.smoothscale(logo_img, (lw, lh))
-            lx = width // 2 - logo_scaled.get_width() // 2
-            ly = height // 2 - logo_scaled.get_height() // 2 + 10
-            screen.blit(logo_scaled, (lx, ly))
-            pygame.display.update()
-            capture_frame()
-            clock.tick(fps)
-
-    def fade_in():
-        fade = pygame.Surface((width, height))
-        fade.fill((0, 0, 0))
-        for alpha in range(255, -1, -8):
-            for ev in pygame.event.get():
-                if ev.type == pygame.QUIT:
-                    if WRITER:
-                        WRITER.close()
-                    if created_display:
-                        pygame.quit()
-                    sys.exit()
-            fade.set_alpha(alpha)
-            screen.blit(fade, (0, 0))
-            pygame.display.update()
-            capture_frame()
-            clock.tick(fps)
-
-    # Story loop
-    scene_index = 0
-    scene_start = time.time()
-
+    # ---- INTRO ----
+    show_powered_by_banner()
+    if logo_img:
+        show_logo_animation(logo_img)
     fade_in()
 
+    # ---- STORY LOOP ----
+    idx = 0
+    start = time.time()
     running = True
+
     while running:
-        clock.tick(fps)
+        clock.tick(FPS)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                if WRITER:
-                    WRITER.close()
-                if created_display:
-                    pygame.quit()
-                return
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    if WRITER:
-                        WRITER.close()
-                    if created_display:
-                        pygame.quit()
-                    return
-                elif event.key in (pygame.K_SPACE, pygame.K_RIGHT):
-                    # manual skip to next scene
-                    scene_index += 1
-                    scene_start = time.time()
-                    fade_in()
-                    if scene_index >= len(scenes):
-                        running = False
-                        break
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                running = False
+            if e.type == pygame.KEYDOWN and e.key in (pygame.K_SPACE, pygame.K_ESCAPE):
+                idx += 1
+                start = time.time()
+                fade_in()
 
-        # Auto scene switch
-        if time.time() - scene_start > scene_duration:
-            scene_index += 1
-            scene_start = time.time()
+        if time.time() - start > SCENE_DURATION:
+            idx += 1
+            start = time.time()
             fade_in()
 
-            if scene_index >= len(scenes):
-                running = False
-                break
+        if idx >= len(scenes):
+            break
 
-        scene = scenes[scene_index]
-
-        # Draw background
+        scene = scenes[idx]
         screen.blit(scene["bg"], (0, 0))
 
-        # Draw image (simple bobbing animation)
         if scene["img"]:
-            bob = int(math.sin((time.time() - scene_start) * 2.0) * 10)
-            img = scene["img"]
-            rect = img.get_rect(center=(width // 2, height // 2 - 80 + bob))
-            screen.blit(img, rect)
+            bob = int(math.sin((time.time() - start) * 2) * 10)
+            r = scene["img"].get_rect(center=(WIDTH//2, HEIGHT//2 - 80 + bob))
+            screen.blit(scene["img"], r)
 
-        # Draw dialog
         draw_dialog_box(scene["text"])
-
         pygame.display.update()
         capture_frame()
 
-    # ---------------- TRANSITION TO GAME ----------------
-    # Try to show a poster image (any file with 'poster' in its name inside assests_story),
-    # otherwise fall back to the forest background. Show it expanded to fill the screen.
-    poster_path = None
-    try:
-        story_dir = os.path.join(BASE_DIR, "assests_story")
-        for fname in os.listdir(story_dir):
-            if "poster" in fname.lower():
-                poster_path = os.path.join("assests_story", fname)
-                break
-    except Exception:
-        poster_path = None
-
-    if not poster_path:
-        poster_path = "assests_story/forest_pix_ui.jpeg"
-
-    poster = load_img(poster_path, (width, height))
-
-    # show poster for a short duration, capturing frames if recording
-    show_seconds = 3
-    end_time = time.time() + show_seconds
-    while time.time() < end_time:
-        for ev in pygame.event.get():
-            if ev.type == pygame.QUIT:
-                if WRITER:
-                    WRITER.close()
-                if created_display:
-                    pygame.quit()
-                return
-        screen.blit(poster, (0, 0))
-        pygame.display.update()
-        capture_frame()
-        clock.tick(fps)
-
-    # Close any writer if recording
     if WRITER:
-        try:
-            WRITER.close()
-            print(f"Saved video: {RECORD_FILE}")
-        except Exception as e:
-            print("Warning: failed to close writer:", e)
-    elif RECORD_FILE:
-        # frames were saved to disk
-        print(f"Frames saved to {FRAMES_DIR}. To assemble into mp4, run: \nffmpeg -r {fps} -i {os.path.join(FRAMES_DIR, 'frame_%06d.png')} -c:v libx264 -pix_fmt yuv420p {RECORD_FILE}")
+        WRITER.close()
 
-    if created_display:
-        pygame.quit()
+    pygame.quit()
 
-
+# ---------------- ENTRY ----------------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run story and optionally record to a video")
-    parser.add_argument("--record", help="Output mp4 filename (example: --record story.mp4)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--record", help="Output mp4 filename")
     args = parser.parse_args()
-
-    run_story(record_file=args.record)
-
+    run_story(args.record)
