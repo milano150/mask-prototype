@@ -1,10 +1,5 @@
 import pygame
 import sys
-from player import Player, BAR_WIDTH, BAR_HEIGHT
-import math
-from ghost1 import Ghost
-from maps.castle import load_castle, SpriteSheet, TILE_SIZE
-import random
 
 pygame.mixer.pre_init(
     frequency=44100,
@@ -13,13 +8,25 @@ pygame.mixer.pre_init(
     buffer=128   # 🔥 LOW LATENCY (try 128 if needed)
 )
 pygame.init()
-pygame.mixer.init()
+
+from audio import load_sounds
+load_sounds()
+
+# import sound objects + channels
+from audio import (
+    click,
+    footstep,
+    FOOTSTEP_CHANNEL,
+    sword_swing,
+    fireball_sound,
+)
 
 
-
-from audio import *
-
-
+from player import Player, BAR_WIDTH, BAR_HEIGHT
+import math
+from ghost1 import Ghost
+from maps.castle import load_castle, SpriteSheet, TILE_SIZE
+import random
 from info_cards import InfoCards
 
 
@@ -27,9 +34,6 @@ from info_cards import InfoCards
 # Initialize pygame
 
 def run_game(screen):
-
-
-    pygame.init()
 
 
     paused = False
@@ -643,6 +647,5 @@ def run_game(screen):
     return score, return_to_menu
 
 if __name__ == "__main__":
-    pygame.init()
     screen = pygame.display.set_mode((800, 600))
     run_game(screen)

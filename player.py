@@ -120,7 +120,7 @@ class Player:
 
 
         self.masks = {
-            "theyyam": {"speed": 300},
+            "theyyam": {"speed": 500},
             "garuda": {"speed": 700},
             "kali": {"speed": 400},
         }

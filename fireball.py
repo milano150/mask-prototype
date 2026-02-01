@@ -1,5 +1,6 @@
 import pygame
 import math
+from audio import *
 
 class Fireball:
     def __init__(self, x, y, dir_x, dir_y):
@@ -64,13 +65,7 @@ class Fireball:
         cx, cy = camera_offset
         screen.blit(self.image, self.rect.move(-cx, -cy))
 
-        # Debug hitbox
-        pygame.draw.rect(
-            screen,
-            (0, 255, 0),
-            self.hitbox.move(-cx, -cy),
-            1
-        )
+        
 
     def is_dead(self):
         return self.lifetime <= 0 or not self.alive
