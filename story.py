@@ -148,6 +148,37 @@ def run_story(screen_arg=None, clock_arg=None, record_file=None, width=WIDTH, he
     # Load assets now that pygame is initialized
     scenes = load_scene_assets(width, height)
 
+    # Prepare 'powered by' logo if available
+    def find_logo_path():
+        # Check title_heading_ui first
+        try:
+            th_dir = os.path.join(BASE_DIR, "assests_ui", "title_heading_ui")
+            if os.path.isdir(th_dir):
+                for f in os.listdir(th_dir):
+                    if any(f.lower().endswith(ext) for ext in ('.png', '.jpg', '.jpeg')):
+                        return os.path.join("assests_ui", "title_heading_ui", f)
+        except Exception:
+            pass
+        # Fallback: search top-level assests_ui for a file containing 'logo'
+        try:
+            ui_dir = os.path.join(BASE_DIR, "assests_ui")
+            for f in os.listdir(ui_dir):
+                if 'logo' in f.lower() and any(f.lower().endswith(ext) for ext in ('.png', '.jpg', '.jpeg')):
+                    return os.path.join("assests_ui", f)
+        except Exception:
+            pass
+        return None
+
+    logo_path = find_logo_path()
+    logo_img = None
+    if logo_path:
+        # scale logo to fit about 40% of width
+        logo_img = load_img(logo_path)
+        # maintain aspect and limit size
+        lw = min(int(width * 0.4), logo_img.get_width())
+        lh = int(lw * logo_img.get_height() / logo_img.get_width()) if logo_img.get_width() else lw
+        logo_img = pygame.transform.smoothscale(logo_img, (lw, lh))
+
     def capture_frame():
         """Save or append the current screen to the writer or frames dir (if recording)."""
         global FRAME_COUNT
@@ -163,6 +194,38 @@ def run_story(screen_arg=None, clock_arg=None, record_file=None, width=WIDTH, he
                 FRAME_COUNT += 1
         except Exception as e:
             print("Warning: failed to capture frame:", e)
+
+    # show a short intro 'powered by' animation if we have a logo
+    def show_powered_by(seconds=2.0):
+        if not logo_img:
+            return
+        start = time.time()
+        while time.time() - start < seconds:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    if WRITER:
+                        WRITER.close()
+                    pygame.quit()
+                    sys.exit()
+            screen.fill((0, 0, 0))
+            # Powered by text
+            pfont = pygame.font.Font(None, 28)
+            text = pfont.render("powered by", True, (230, 230, 230))
+            tx = width // 2 - text.get_width() // 2
+            ty = height // 2 - logo_img.get_height() // 2 - 30
+            screen.blit(text, (tx, ty))
+            # logo with small pulse scale
+            t = (time.time() - start) * 2.0
+            pulse = 1.0 + 0.03 * math.sin(t * math.pi)
+            lw = int(logo_img.get_width() * pulse)
+            lh = int(logo_img.get_height() * pulse)
+            logo_scaled = pygame.transform.smoothscale(logo_img, (lw, lh))
+            lx = width // 2 - logo_scaled.get_width() // 2
+            ly = height // 2 - logo_scaled.get_height() // 2 + 10
+            screen.blit(logo_scaled, (lx, ly))
+            pygame.display.update()
+            capture_frame()
+            clock.tick(fps)
 
     def fade_in():
         fade = pygame.Surface((width, height))
