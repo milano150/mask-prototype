@@ -363,7 +363,7 @@ def run_story(record_file=None, music_file=None):
     if pygame.mixer.music.get_busy():
         pygame.mixer.music.stop()
 
-    pygame.quit()
+    return
 
 # ---------------- ENTRY ----------------
 if __name__ == "__main__":

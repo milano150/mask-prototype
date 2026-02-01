@@ -5,6 +5,7 @@ import math
 import glob
 import main
 from audio import click
+import story
 
 pygame.init()
 
@@ -334,8 +335,8 @@ def main_menu():
 
     buttons = [
         MenuButton("▶", "NEW GAME", 230),
-        MenuButton("★", "HIGH SCORE", 300),
-        MenuButton("⏻", "EXIT", 370),
+        MenuButton("📖", "STORY", 300),
+        MenuButton("★", "HIGH SCORE", 370),
     ]
 
     exit_anim = False
@@ -385,13 +386,15 @@ def main_menu():
                     click.play()
 
 
-
-
                 elif buttons[1].rect.collidepoint(mouse):
-                    show_modal("HIGH SCORE", f"{highscore}", duration=2000)
+                    click.play()
+                    story.run_story() 
+
+                    pygame.display.set_mode((WIDTH, HEIGHT))
+                    pygame.display.set_caption("Mukha Tejah : Mask Power System")
+
                 elif buttons[2].rect.collidepoint(mouse):
-                    exit_anim = True
-                    fireball.shoot(WIDTH // 2, HEIGHT // 2)
+                    show_modal("HIGH SCORE", f"{highscore}", duration=2000)
 
         if exit_anim and not fireball.active:
             pygame.quit()
