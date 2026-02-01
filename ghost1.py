@@ -28,7 +28,7 @@ class Ghost:
         self.y = y
 
         
-        self.speed = 50
+        self.speed = random.randint(100, 200)
         self.size = 32
         # --- collision rect (must exist immediately) ---
         self.rect = pygame.Rect(
