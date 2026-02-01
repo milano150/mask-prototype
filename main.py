@@ -229,12 +229,27 @@ def run_game(screen):
 
         if not paused and not player.dead:
             keys = pygame.key.get_pressed()
-            old_rect = player.rect.copy()
+            # --- MOVE X ---
             player.update(keys, dt)
+            dx, dy = player.get_movement(keys, dt)
+
+            player.rect.x += dx
             for wall in walls:
                 if player.rect.colliderect(wall):
-                    player.rect = old_rect
-                    break
+                    if dx > 0:
+                        player.rect.right = wall.left
+                    elif dx < 0:
+                        player.rect.left = wall.right
+
+            # --- MOVE Y ---
+            player.rect.y += dy
+            for wall in walls:
+                if player.rect.colliderect(wall):
+                    if dy > 0:
+                        player.rect.bottom = wall.top
+                    elif dy < 0:
+                        player.rect.top = wall.bottom
+
 
 
         # ⚔️ Sword damage + debug during swing

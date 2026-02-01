@@ -188,8 +188,8 @@ class Player:
 
         self.move_vx = 0.0
         self.move_vy = 0.0
-        self.move_accel = 15000.0   # how fast you speed up
-        self.move_drag = 10.0     # how fast you slow down
+        self.move_accel = 7000.0   # how fast you speed up
+        self.move_drag = 6.0     # how fast you slow down
 
     # -----------------
     # MASK
@@ -323,6 +323,51 @@ class Player:
     # -----------------
     # UPDATE
     # -----------------
+
+    def get_movement(self, keys, dt):
+        if self.dead or self.stunned:
+            return 0, 0
+
+        dx = dy = 0
+
+        if keys[pygame.K_a]:
+            dx -= 1
+            self.facing = -1
+            self.view = "LEFT"
+        if keys[pygame.K_d]:
+            dx += 1
+            self.facing = 1
+            self.view = "RIGHT"
+        if keys[pygame.K_w]:
+            dy -= 1
+            self.view = "BACK"
+        if keys[pygame.K_s]:
+            dy += 1
+            self.view = "FRONT"
+
+        # normalize diagonal movement
+        length = math.hypot(dx, dy)
+        if length > 0:
+            dx /= length
+            dy /= length
+
+        # base velocity
+        target_vx = dx * self.speed
+        target_vy = dy * self.speed
+
+        # acceleration + drag (reuse your existing physics)
+        self.move_vx += (target_vx - self.move_vx) * self.move_accel * dt / self.speed
+        self.move_vy += (target_vy - self.move_vy) * self.move_accel * dt / self.speed
+
+        self.move_vx *= max(0.0, 1.0 - self.move_drag * dt)
+        self.move_vy *= max(0.0, 1.0 - self.move_drag * dt)
+
+        # final movement INCLUDING knockback
+        final_dx = (self.move_vx + self.vx) * dt
+        final_dy = (self.move_vy + self.vy) * dt
+
+        return int(final_dx), int(final_dy)
+
     def update(self, keys, dt):
         if self.dead:
             return
@@ -410,8 +455,6 @@ class Player:
         self.move_vy *= max(0.0, 1.0 - self.move_drag * dt)
 
         # apply movement + knockback velocity
-        self.rect.x += (self.move_vx + self.vx) * dt
-        self.rect.y += (self.move_vy + self.vy) * dt
 
 
 
