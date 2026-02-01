@@ -4,6 +4,7 @@ import os
 import math 
 import glob
 import main
+from audio import click
 
 pygame.init()
 
@@ -365,10 +366,7 @@ def main_menu():
             hover = btn.rect.collidepoint(mouse)
             btn.draw(hover)
 
-            if hover and not fireball.active:
-                fireball.shoot(btn.rect.left, btn.rect.centery)
-
-        fireball.update()
+            
 
         # Events
         for event in pygame.event.get():
@@ -384,6 +382,7 @@ def main_menu():
                     # reset menu state after returning from game
                     exit_anim = False
                     fireball.active = False
+                    click.play()
 
 
 

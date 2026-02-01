@@ -6,6 +6,20 @@ from ghost1 import Ghost
 from maps.castle import load_castle, SpriteSheet, TILE_SIZE
 import random
 
+pygame.mixer.pre_init(
+    frequency=44100,
+    size=-16,
+    channels=2,
+    buffer=128   # 🔥 LOW LATENCY (try 128 if needed)
+)
+pygame.init()
+pygame.mixer.init()
+
+
+
+from audio import *
+
+
 from info_cards import InfoCards
 
 
@@ -13,8 +27,10 @@ from info_cards import InfoCards
 # Initialize pygame
 
 def run_game(screen):
+
+
     pygame.init()
-    pygame.mixer.init()
+
 
     paused = False
     return_to_menu = False
@@ -153,6 +169,28 @@ def run_game(screen):
             ))
 
             spawn_timer = 0
+        
+        # -------------------------
+        # FOOTSTEP SOUND LOGIC
+        # -------------------------
+        if player.current_mask == "garuda":
+            footstep.set_volume(0.35)
+        elif player.current_mask == "kali":
+            footstep.set_volume(0.2)
+
+        if (
+            not paused
+            and not player.dead
+            and player.is_moving
+            and not player.stunned
+            
+        ):
+            
+            if not FOOTSTEP_CHANNEL.get_busy():
+                FOOTSTEP_CHANNEL.play(footstep, loops=-1)
+        else:
+            FOOTSTEP_CHANNEL.stop()
+
 
 
         for event in pygame.event.get():
@@ -200,6 +238,7 @@ def run_game(screen):
 
                 if event.key == pygame.K_h:
                     player.take_damage(10)
+                    click.play()
 
                 if event.key == pygame.K_ESCAPE:
                     paused = not paused
@@ -226,6 +265,8 @@ def run_game(screen):
                             player.sword_swinging = True
                             player.sword_timer = player.sword_duration
                             player.sword_angle = 90 if player.facing == 1 else -105
+
+                            sword_swing.play()
                 if player.dead and event.key == pygame.K_r:
                     # Reset player
                     player.respawn(*spawn)
@@ -394,6 +435,7 @@ def run_game(screen):
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             overlay.fill((150, 150, 255, 70))
             screen.blit(overlay, (0, 0))
+            
 
         if player.current_mask == "kali" and player.charging:
             player.draw_charge_sword(screen, (camera_x, camera_y))

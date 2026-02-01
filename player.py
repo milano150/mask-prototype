@@ -18,6 +18,8 @@ class HealthBar:
         self.max_health = max_health
         self.step = max_health / TOTAL_FRAMES
         self.current_step = 0
+        
+
 
     def take_damage(self, amount):
         steps_lost = round(amount / self.step)
@@ -96,6 +98,7 @@ class Player:
         self.fire_dir_x = 1
         self.fire_dir_y = 0
         self.charge_sword_rect = None
+        self.is_moving = False
 
         
         self.stunned = False
@@ -420,6 +423,10 @@ class Player:
             self.view = "FRONT"
             moving = True
 
+        self.is_moving = moving
+
+
+
         if moving:
             self.walk_count += dt * 10
         else:
@@ -455,7 +462,6 @@ class Player:
         self.move_vy *= max(0.0, 1.0 - self.move_drag * dt)
 
         # apply movement + knockback velocity
-
 
 
         # decay knockback velocity (simple exponential-like decay)
