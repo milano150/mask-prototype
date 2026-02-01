@@ -6,6 +6,7 @@ import sys
 import time
 
 pygame.init()
+pygame.mixer.init()
 
 # ---------------- CONFIG ----------------
 WIDTH, HEIGHT = 800, 600
@@ -169,7 +170,7 @@ def fade_in():
         clock.tick(FPS)
 
 # ---------------- MAIN STORY ----------------
-def run_story(record_file=None):
+def run_story(record_file=None, music_file=None):
     global screen, clock, font, RECORD_FILE, WRITER, FRAMES_DIR
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -182,7 +183,88 @@ def run_story(record_file=None):
         WRITER = imageio.get_writer(RECORD_FILE, fps=FPS)
 
     scenes = load_scene_assets()
+        # ---------------- BACKGROUND MUSIC ----------------
+    def find_music_path():
+        # preferred: assests_ui/sound_ui/background_music.*
+        candidates = [
+            os.path.join(BASE_DIR, "assests_ui", "sound_ui"),
+            os.path.join(BASE_DIR, "assests_ui"),
+            os.path.join(BASE_DIR, "assests_story"),
+            os.path.join(BASE_DIR, "assets"),
+        ]
+        exts = (".mp3", ".ogg", ".wav", ".m4a", ".flac")
+        # check specific filename first
+        specific = os.path.join(BASE_DIR, "assests_ui", "sound_ui", "background_music.mp3")
+        if os.path.exists(specific):
+            return specific
+        # search candidates for first file matching extension
+        for d in candidates:
+            try:
+                if not os.path.isdir(d):
+                    continue
+                for f in os.listdir(d):
+                    if f.lower().endswith(exts):
+                        return os.path.join(d, f)
+            except Exception:
+                continue
+        return None
 
+    music_path = find_music_path()
+    music_loaded = False
+
+    if music_path:
+        try:
+            if not pygame.mixer.get_init():
+                try:
+                    pygame.mixer.init()
+                except Exception as e:
+                    print("Warning: pygame.mixer failed to init:", e)
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(0.7)
+            music_loaded = True
+            print(f"Background music loaded: {music_path}")
+        except Exception as e:
+            print("Failed to load background music:", e)
+    else:
+        # No music file found — generate a simple test tone and use that so the story has background audio.
+        try:
+            gen_dir = os.path.join(BASE_DIR, "assests_ui", "sound_ui")
+            os.makedirs(gen_dir, exist_ok=True)
+            gen_path = os.path.join(gen_dir, "background_music.wav")
+
+            # generate a simple wav (sine wave) if it does not exist
+            if not os.path.exists(gen_path):
+                import wave, struct
+                duration = 6.0
+                framerate = 44100
+                amplitude = 16000
+                freq1 = 220.0
+                freq2 = 330.0
+                nframes = int(duration * framerate)
+                with wave.open(gen_path, 'w') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(framerate)
+                    for i in range(nframes):
+                        t = float(i) / framerate
+                        # simple two-tone mix
+                        val = int(amplitude * (0.5 * (math.sin(2.0 * math.pi * freq1 * t) + math.sin(2.0 * math.pi * freq2 * t))))
+                        data = struct.pack('<h', max(-32767, min(32767, val)))
+                        wf.writeframesraw(data)
+                print(f"Generated test music at: {gen_path}")
+            music_path = gen_path
+            if not pygame.mixer.get_init():
+                try:
+                    pygame.mixer.init()
+                except Exception as e:
+                    print("Warning: pygame.mixer failed to init:", e)
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(0.7)
+            music_loaded = True
+            print("Using generated test background music.")
+        except Exception as e:
+            print("Could not generate test music:", e)
+            print("No background music will be played. To use your own music pass --music <path> or add files to assests_ui/sound_ui.")
     # Load VECTRA/logo image robustly (check title_heading_ui then assests_ui)
     def find_logo_path():
         # 1) check title_heading_ui folder
@@ -247,6 +329,24 @@ def run_story(record_file=None):
             break
 
         scene = scenes[idx]
+                # ---- MUSIC CONTROL (Slide 3 to Slide 8) ----
+        if music_loaded:
+            # Start music at slide index 2 (Slide 3)
+            if idx == 2 and not pygame.mixer.music.get_busy():
+                try:
+                    pygame.mixer.music.play(-1)
+                    print("Background music started")
+                except Exception as e:
+                    print("Failed to start background music:", e)
+
+            # Stop music after slide index 7 (Slide 8)
+            if idx > 7 and pygame.mixer.music.get_busy():
+                try:
+                    pygame.mixer.music.stop()
+                    print("Background music stopped")
+                except Exception as e:
+                    print("Failed to stop background music:", e)
+
         screen.blit(scene["bg"], (0, 0))
 
         if scene["img"]:
@@ -260,6 +360,8 @@ def run_story(record_file=None):
 
     if WRITER:
         WRITER.close()
+    if pygame.mixer.music.get_busy():
+        pygame.mixer.music.stop()
 
     pygame.quit()
 
@@ -267,5 +369,6 @@ def run_story(record_file=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--record", help="Output mp4 filename")
+    parser.add_argument("--music", help="Path to background music file to use (overrides discovery)")
     args = parser.parse_args()
-    run_story(args.record)
+    run_story(args.record, music_file=args.music)
