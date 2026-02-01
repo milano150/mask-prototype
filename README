@@ -128,4 +128,24 @@ Smart trade-offs were made to deliver a complete and playable prototype within h
 
 ---
 
+## 🧪 How to Download & Play the Game
+
+### Option 1: Play via ZIP (Recommended for Judges)
+
+1. Go to the **Releases** section of this repository  
+2. Download the latest `MukhaTejah.zip` file  
+3. Extract the ZIP file to any folder on your system  
+
+### Requirements
+- Python 3.8 or above installed  
+- Pygame library  
+
+### Steps to Run the Game
+
+1. Open a terminal / command prompt inside the extracted folder  
+2. Install dependencies:
+   ```bash
+   pip install pygame
+3. Run the game 
+   '''python main.py 
 
