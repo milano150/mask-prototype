@@ -8,487 +8,558 @@ import random
 
 
 # Initialize pygame
-pygame.init()
-pygame.mixer.init()
 
-paused = False
+def run_game(screen):
+    pygame.init()
+    pygame.mixer.init()
 
-
-font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 25)
-death_font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 80)
-
-BLIND_RADIUS = 240    # visible area around Kali
-BLIND_SOFTNESS = 120   # edge smoothness
-
-
-
-# Create window
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-blind_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-
-pygame.display.set_caption("Mask Game")
-
-# --- LOAD CASTLE MAP ---
-game_map, walls, spawn = load_castle()
-
-# --- LOAD MAP TILES ---
-castle_sheet = SpriteSheet("maps/castle.png")
-cave_sheet = SpriteSheet("maps/cave.png")
-wall_tile = castle_sheet.get_sprite(120, 60)
-floor_tile = cave_sheet.get_sprite(16, 16)
-
-
-health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
-
-# --- MASK UI SETUP ---
-mask_icons = {
-    "theyyam": pygame.image.load("assets/icon_theyyam.png").convert_alpha(),
-    "garuda": pygame.image.load("assets/icon_garuda.png").convert_alpha(),
-    "kali": pygame.image.load("assets/icon_kali.png").convert_alpha(),
-}
-
-wheel_image = pygame.image.load("assets/wheel2.png").convert_alpha()
-wheel_image.set_alpha(90)
-
-WHEEL_UI_SIZE = 300
-wheel_image = pygame.transform.scale(wheel_image, (WHEEL_UI_SIZE, WHEEL_UI_SIZE))
-
-hotbar_img = pygame.image.load("assets/hotbar.png").convert_alpha()
-
-FRAME_W = 64
-FRAME_H = 64
-
-hotbar_normal = hotbar_img.subsurface(pygame.Rect(0, 0, FRAME_W, FRAME_H))
-hotbar_gold   = hotbar_img.subsurface(pygame.Rect(0, FRAME_H, FRAME_W, FRAME_H))
-
-HOTBAR_SCALE = 4.5  # tweak size here
-
-hotbar_normal = pygame.transform.scale(
-    hotbar_normal, (FRAME_W * HOTBAR_SCALE, FRAME_H * HOTBAR_SCALE)
-)
-hotbar_gold = pygame.transform.scale(
-    hotbar_gold, (FRAME_W * HOTBAR_SCALE, FRAME_H * HOTBAR_SCALE)
-)
-
-
-# UI constants
-ICON_SIZE = 100
-CENTER_SIZE = 120
-BOTTOM_Y = HEIGHT - 10
-
-BAR_VISIBLE_Y = int(BAR_HEIGHT * 0.4)
-BAR_VISIBLE_H = int(BAR_HEIGHT * 0.25)
-
-wheel_offset = 0.0
-wheel_target = 0.0
-
-mask_name_timer = 0.0
-MASK_NAME_DURATION = 1.0
-MASK_NAME_FADE = 0.5
-
-WHEEL_RADIUS = 120
-WHEEL_ARC = math.pi / 4
-
-mask_order = ["theyyam", "garuda", "kali"]
-
-clock = pygame.time.Clock()
-FPS = 60
-
-player = Player(*spawn)
-
-
-ghosts = []
-fireballs = []
-ghosts.append(Ghost(
-    spawn[0] + random.randint(-200, 200),
-    spawn[1] + random.randint(-200, 200)
-))
-
-
-MAX_GHOSTS = 6
-SPAWN_DELAY = 5000
-spawn_timer = 0
-
-
-
-# Main loop
-running = True
-while running:
-    raw_dt = clock.tick(FPS) / 1000
-    dt = 0 if paused else raw_dt
-
-    wheel_offset += (wheel_target - wheel_offset) * 8 * dt
-
-    if mask_name_timer > 0:
-        mask_name_timer -= dt
-
-    if not paused:
-        spawn_timer += dt * 1000  # convert to ms
-
-    if len(ghosts) < MAX_GHOSTS and spawn_timer >= SPAWN_DELAY:
-        ghosts.append(Ghost(
-            spawn[0] + random.randint(-200, 200),
-            spawn[1] + random.randint(-200, 200)
-        ))
-
-        spawn_timer = 0
-
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        if event.type == pygame.KEYDOWN:
-
-            can_switch = player.mask_switch_cd <= 0  # gold hotbar
-            if event.key == pygame.K_1 and can_switch:
-                player.change_mask("theyyam")
-                player.mask_switch_cd = player.mask_switch_delay
-                mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
-                wheel_target = mask_order.index("theyyam") 
-
-            if event.key == pygame.K_2 and can_switch:
-                player.change_mask("garuda")
-                player.mask_switch_cd = player.mask_switch_delay
-                mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
-                wheel_target = mask_order.index("garuda") 
-
-            if event.key == pygame.K_3 and can_switch:
-                player.change_mask("kali")
-                player.mask_switch_cd = player.mask_switch_delay
-                mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
-                wheel_target = mask_order.index("kali") 
-
-
-            if event.key == pygame.K_h:
-                player.take_damage(10)
-
-            if event.key == pygame.K_ESCAPE:
-                paused = not paused
-            if event.key == pygame.K_q:
-                if (
-                    player.current_mask == "kali"
-                    and not player.charging
-                    and player.charge_cd <= 0
-                ):
-                    player.start_charge()
-
-
-            if event.key == pygame.K_SPACE:
-                if player.current_mask == "theyyam":
-                    keys_now = pygame.key.get_pressed()
-                    fireball = player.shoot_fireball(keys_now)
-                    if fireball:
-                        fireballs.append(fireball)
-
-
-                # ⚔️ Sword (Kali)
-                elif player.current_mask == "kali":
-                    if not player.sword_swinging:
-                        player.sword_swinging = True
-                        player.sword_timer = player.sword_duration
-                        player.sword_angle = 90 if player.facing == 1 else -105
-            if player.dead and event.key == pygame.K_r:
-                # Reset player
-                player.respawn(*spawn)
-
-                # Reset enemies & projectiles
-                ghosts.clear()
-                fireballs.clear()
-
-                ghosts.append(Ghost(
-                    spawn[0] + random.randint(-150, 150),
-                    spawn[1] + random.randint(-150, 150)
-                ))
-
-                
-
-                spawn_timer = 0
-
-
-    if not paused and not player.dead:
-        keys = pygame.key.get_pressed()
-        old_rect = player.rect.copy()
-        player.update(keys, dt)
-        for wall in walls:
-            if player.rect.colliderect(wall):
-                player.rect = old_rect
-                break
-
-
-    # ⚔️ Sword damage + debug during swing
-    if player.current_mask == "kali" and player.sword_swinging:
-        player.sword_attack(ghosts, debug_surface=screen)
+    paused = False
+    return_to_menu = False
     
 
 
-    if not paused:
-        for g in ghosts:
-            g.update(player, dt)
-    for i in range(len(ghosts)):
-        for j in range(i + 1, len(ghosts)):
-            g1 = ghosts[i]
-            g2 = ghosts[j]
+    font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 25)
+    death_font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 80)
 
-            r1 = g1.rect
-            r2 = g2.rect
+    BLIND_RADIUS = 240    # visible area around Kali
+    BLIND_SOFTNESS = 120   # edge smoothness
 
-            if r1.colliderect(r2):
-                push = 6
-                g1.apply_knockback(g2.x, g2.y, push)
-                g2.apply_knockback(g1.x, g1.y, push)
+    score = 0
 
-    if not paused:
-        for fireball in fireballs[:]:
-            fireball.update(dt, walls)
 
-            for ghost in ghosts:
-                if ghost.alive and fireball.hitbox.colliderect(ghost.rect):
-                    ghost.take_damage(fireball.damage)
+    # Create window
+    WIDTH, HEIGHT = screen.get_size()
+    blind_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
 
-                    # 🔥 FIREBALL KNOCKBACK
-                    ghost.apply_knockback(
-                        fireball.hitbox.centerx,
-                        fireball.hitbox.centery,
-                        14  # fireball knockback force
-                    )
+    MENU_BTN_RECT = pygame.Rect(
+        WIDTH // 2 - 160,
+        HEIGHT // 2 + 60,
+        320,
+        60
+    )
 
-                    fireball.alive = False
+
+    pygame.display.set_caption("Mask Game")
+
+    # --- LOAD CASTLE MAP ---
+    game_map, walls, spawn = load_castle()
+
+    # --- LOAD MAP TILES ---
+    castle_sheet = SpriteSheet("maps/castle.png")
+    cave_sheet = SpriteSheet("maps/cave.png")
+    wall_tile = castle_sheet.get_sprite(120, 60)
+    floor_tile = cave_sheet.get_sprite(16, 16)
+
+
+    health_bar_img = pygame.image.load("assets/healthbar.png").convert_alpha()
+
+    # --- MASK UI SETUP ---
+    mask_icons = {
+        "theyyam": pygame.image.load("assets/icon_theyyam.png").convert_alpha(),
+        "garuda": pygame.image.load("assets/icon_garuda.png").convert_alpha(),
+        "kali": pygame.image.load("assets/icon_kali.png").convert_alpha(),
+    }
+
+    wheel_image = pygame.image.load("assets/wheel2.png").convert_alpha()
+    wheel_image.set_alpha(90)
+
+    WHEEL_UI_SIZE = 300
+    wheel_image = pygame.transform.scale(wheel_image, (WHEEL_UI_SIZE, WHEEL_UI_SIZE))
+
+    hotbar_img = pygame.image.load("assets/hotbar.png").convert_alpha()
+
+    FRAME_W = 64
+    FRAME_H = 64
+
+    hotbar_normal = hotbar_img.subsurface(pygame.Rect(0, 0, FRAME_W, FRAME_H))
+    hotbar_gold   = hotbar_img.subsurface(pygame.Rect(0, FRAME_H, FRAME_W, FRAME_H))
+
+    HOTBAR_SCALE = 4.5  # tweak size here
+
+    hotbar_normal = pygame.transform.scale(
+        hotbar_normal, (FRAME_W * HOTBAR_SCALE, FRAME_H * HOTBAR_SCALE)
+    )
+    hotbar_gold = pygame.transform.scale(
+        hotbar_gold, (FRAME_W * HOTBAR_SCALE, FRAME_H * HOTBAR_SCALE)
+    )
+
+
+    # UI constants
+    ICON_SIZE = 100
+    CENTER_SIZE = 120
+    BOTTOM_Y = HEIGHT - 10
+
+    BAR_VISIBLE_Y = int(BAR_HEIGHT * 0.4)
+    BAR_VISIBLE_H = int(BAR_HEIGHT * 0.25)
+
+    wheel_offset = 0.0
+    wheel_target = 0.0
+
+    mask_name_timer = 0.0
+    MASK_NAME_DURATION = 1.0
+    MASK_NAME_FADE = 0.5
+
+    WHEEL_RADIUS = 120
+    WHEEL_ARC = math.pi / 4
+
+    mask_order = ["theyyam", "garuda", "kali"]
+
+    clock = pygame.time.Clock()
+    FPS = 60
+
+    player = Player(*spawn)
+
+
+    ghosts = []
+    fireballs = []
+    ghosts.append(Ghost(
+        spawn[0] + random.randint(-200, 200),
+        spawn[1] + random.randint(-200, 200)
+    ))
+
+
+    MAX_GHOSTS = 6
+    SPAWN_DELAY = 5000
+    spawn_timer = 0
+
+
+
+    # Main loop
+    running = True
+    while running:
+        raw_dt = clock.tick(FPS) / 1000
+        dt = 0 if paused else raw_dt
+
+        wheel_offset += (wheel_target - wheel_offset) * 8 * dt
+
+        if mask_name_timer > 0:
+            mask_name_timer -= dt
+
+        if not paused:
+            spawn_timer += dt * 1000  # convert to ms
+
+        if len(ghosts) < MAX_GHOSTS and spawn_timer >= SPAWN_DELAY:
+            ghosts.append(Ghost(
+                spawn[0] + random.randint(-200, 200),
+                spawn[1] + random.randint(-200, 200)
+            ))
+
+            spawn_timer = 0
+
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if (paused or player.dead) and MENU_BTN_RECT.collidepoint(event.pos):
+                    return_to_menu = True
+                    running = False
+
+
+
+            if event.type == pygame.KEYDOWN:
+
+                can_switch = player.mask_switch_cd <= 0  # gold hotbar
+                if event.key == pygame.K_1 and can_switch:
+                    player.change_mask("theyyam")
+                    player.mask_switch_cd = player.mask_switch_delay
+                    mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
+                    wheel_target = mask_order.index("theyyam") 
+
+                if event.key == pygame.K_2 and can_switch:
+                    player.change_mask("garuda")
+                    player.mask_switch_cd = player.mask_switch_delay
+                    mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
+                    wheel_target = mask_order.index("garuda") 
+
+                if event.key == pygame.K_3 and can_switch:
+                    player.change_mask("kali")
+                    player.mask_switch_cd = player.mask_switch_delay
+                    mask_name_timer = MASK_NAME_DURATION + MASK_NAME_FADE
+                    wheel_target = mask_order.index("kali") 
+
+
+                if event.key == pygame.K_h:
+                    player.take_damage(10)
+
+                if event.key == pygame.K_ESCAPE:
+                    paused = not paused
+                if event.key == pygame.K_q:
+                    if (
+                        player.current_mask == "kali"
+                        and not player.charging
+                        and player.charge_cd <= 0
+                    ):
+                        player.start_charge()
+
+
+                if event.key == pygame.K_SPACE:
+                    if player.current_mask == "theyyam":
+                        keys_now = pygame.key.get_pressed()
+                        fireball = player.shoot_fireball(keys_now)
+                        if fireball:
+                            fireballs.append(fireball)
+
+
+                    # ⚔️ Sword (Kali)
+                    elif player.current_mask == "kali":
+                        if not player.sword_swinging:
+                            player.sword_swinging = True
+                            player.sword_timer = player.sword_duration
+                            player.sword_angle = 90 if player.facing == 1 else -105
+                if player.dead and event.key == pygame.K_r:
+                    # Reset player
+                    player.respawn(*spawn)
+
+                    # Reset enemies & projectiles
+                    ghosts.clear()
+                    fireballs.clear()
+
+                    ghosts.append(Ghost(
+                        spawn[0] + random.randint(-150, 150),
+                        spawn[1] + random.randint(-150, 150)
+                    ))
+
+                    
+
+                    spawn_timer = 0
+                    score = 0
+
+
+        if not paused and not player.dead:
+            keys = pygame.key.get_pressed()
+            old_rect = player.rect.copy()
+            player.update(keys, dt)
+            for wall in walls:
+                if player.rect.colliderect(wall):
+                    player.rect = old_rect
                     break
 
-            if fireball.is_dead():
-                fireballs.remove(fireball)
 
-
-    
-    ghosts = [g for g in ghosts if g.alive]
-
-
-    camera_x = player.rect.centerx - WIDTH // 2
-    camera_y = player.rect.centery - HEIGHT // 2
-
-
-    # --- DRAW MAP ---
-    screen.fill((20, 20, 20))
-    for r, row in enumerate(game_map):
-        for c, char in enumerate(row):
-            x = c * TILE_SIZE - camera_x
-            y = r * TILE_SIZE - camera_y
-            screen.blit(floor_tile, (x, y))
-            if char == "W":
-                screen.blit(wall_tile, (x, y))
-
-    if player.dead:
-        overlay = pygame.Surface((WIDTH, HEIGHT))
-        overlay.fill((0, 0, 0, 160))
-        overlay.set_alpha(180)
-        screen.blit(overlay, (0, 0))
-
-        text = death_font.render("YOU DIED", True, (200, 0, 0))
-        subtext = font.render("     press R to respawn", True, (200, 200, 200))
-        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-        rect2 = text.get_rect(center=(WIDTH // 2, (HEIGHT // 2)+90))
-        screen.blit(text, rect)
-        screen.blit(subtext, rect2)
-
-        pygame.display.flip()
-        continue
-
-
-    player.draw(screen, (camera_x, camera_y))
-
-    # ⚠️ STUNNED TEXT
-    if player.stun_text_timer > 0 and player.current_mask == "garuda":
-        alpha = int(255 * min(1, player.stun_text_timer))
-        stun_text = font.render("stunned!", True, (255, 220, 0))
-        stun_text.set_alpha(alpha)
-
-        text_x = player.rect.centerx - camera_x
-        text_y = player.rect.top - camera_y - 45
-
-        screen.blit(
-            stun_text,
-            stun_text.get_rect(center=(text_x, text_y))
-        )
-
-
-    if player.stunned and player.current_mask == "garuda":
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((150, 150, 255, 70))
-        screen.blit(overlay, (0, 0))
-
-    if player.current_mask == "kali" and player.charging:
-        player.draw_charge_sword(screen, (camera_x, camera_y))
-        if player.charge_sword_rect:
-            hitbox = player.charge_sword_rect.inflate(20, -100)
-
+        # ⚔️ Sword damage + debug during swing
+        if player.current_mask == "kali" and player.sword_swinging:
+            player.sword_attack(ghosts, debug_surface=screen)
 
             for ghost in ghosts:
-                if ghost.alive and hitbox.colliderect(ghost.rect):
-                    ghost.take_damage(40)
-                    ghost.apply_knockback(
-                        player.rect.centerx,
-                        player.rect.centery,
-                        22
-                    )
+                if not player.dead and not ghost.alive and not hasattr(ghost, "scored"):
+                    score += 15
+                    ghost.scored = True
 
-            # 🔴 DEBUG (optional)
-            #pygame.draw.rect(
-            #    screen,
-            #    (255, 0, 0),
-            #    hitbox.move(-camera_x, -camera_y),
-            #    2
-            #)
-
-    for fireball in fireballs:
-        fireball.draw(screen, (camera_x, camera_y))
+        
 
 
-    for g in ghosts:
-        g.draw(screen, (camera_x, camera_y))
+        if not paused:
+            for g in ghosts:
+                g.update(player, dt)
+        for i in range(len(ghosts)):
+            for j in range(i + 1, len(ghosts)):
+                g1 = ghosts[i]
+                g2 = ghosts[j]
 
-    # 🌑 KALI BLINDNESS EFFECT (FIXED)
-    if player.current_mask == "kali" and not player.dead:
-        blind_surface.fill((0, 0, 0, 220))  # darkness strength
+                r1 = g1.rect
+                r2 = g2.rect
 
-        px = player.rect.centerx - camera_x
-        py = player.rect.centery - camera_y
+                if r1.colliderect(r2):
+                    push = 6
+                    g1.apply_knockback(g2.x, g2.y, push)
+                    g2.apply_knockback(g1.x, g1.y, push)
 
-        # Cut vision hole
-        pygame.draw.circle(
-            blind_surface,
-            (0, 0, 0, 0),
-            (int(px), int(py)),
-            BLIND_RADIUS
-        )
+        if not paused:
+            for fireball in fireballs[:]:
+                fireball.update(dt, walls)
 
-        screen.blit(blind_surface, (0, 0))
+                for ghost in ghosts:
+                    if ghost.alive and fireball.hitbox.colliderect(ghost.rect):
+                        ghost.take_damage(fireball.damage)
 
+                        if not ghost.alive:
+                            score += 15
 
+                        # 🔥 FIREBALL KNOCKBACK
+                        ghost.apply_knockback(
+                            fireball.hitbox.centerx,
+                            fireball.hitbox.centery,
+                            14  # fireball knockback force
+                        )
 
-    # --- HEALTH BAR ---
-    bar_rect = player.health_bar.get_frame_rect()
+                        fireball.alive = False
+                        break
 
-    cropped_rect = pygame.Rect(
-        bar_rect.x,
-        bar_rect.y + BAR_VISIBLE_Y,
-        BAR_WIDTH,
-        BAR_VISIBLE_H
-    )
-
-    frame = pygame.Surface((BAR_WIDTH, BAR_VISIBLE_H), pygame.SRCALPHA)
-    frame.blit(health_bar_img, (0, 0), cropped_rect)
-
-    UI_WIDTH, UI_HEIGHT = 260, 70
-    frame = pygame.transform.scale(frame, (UI_WIDTH, UI_HEIGHT))
-
-    x = (WIDTH - UI_WIDTH) // 2
-    y = 4
-    screen.blit(frame, (x, y))
-
-    # ❤️ HEALTH BAR DAMAGE POLISH
-    if player.health_flash_timer > 0:
-        t = player.health_flash_timer / player.health_flash_duration
-
-        # --- micro shake ---
-        shake_x = shake_y = 0
-        if player.health_shake_timer > 0:
-            shake_x = random.randint(-2, 2)
-            shake_y = random.randint(-1, 1)
-
-        # --- white impact flash (very short) ---
-        if t > 0.85:
-            flash = pygame.Surface((UI_WIDTH, UI_HEIGHT), pygame.SRCALPHA)
-            flash.fill((255, 255, 255, 180))
-            screen.blit(flash, (x + shake_x, y + shake_y))
-
-        # --- red pulse fade ---
-        red_alpha = int(140 * (t ** 2))
-        pulse = pygame.Surface((UI_WIDTH, UI_HEIGHT), pygame.SRCALPHA)
-        pulse.fill((255, 40, 40, red_alpha))
-        screen.blit(pulse, (x + shake_x, y + shake_y))
+                if fireball.is_dead():
+                    fireballs.remove(fireball)
 
 
-
-    # --- MASK WHEEL ---
-    wheel_rect = wheel_image.get_rect(midbottom=(WIDTH // 2, HEIGHT))
-    #screen.blit(wheel_image, wheel_rect)
-    is_ready = player.mask_switch_cd <= 0
-
-    # Base hotbar
-    hotbar_base = hotbar_gold if is_ready else hotbar_normal
-    hotbar = hotbar_base.copy()
-
-    # Base opacity
-    hotbar.set_alpha(140 if not is_ready else 210)
-
-    hb_rect = hotbar.get_rect(
-        midbottom=wheel_rect.midbottom
-    )
-    screen.blit(hotbar, hb_rect)
+        
+        ghosts = [g for g in ghosts if g.alive]
 
 
+        camera_x = player.rect.centerx - WIDTH // 2
+        camera_y = player.rect.centery - HEIGHT // 2
 
-    if mask_name_timer > 0:
-        mask_name = player.current_mask
-        alpha = 255 if mask_name_timer > MASK_NAME_FADE else int(
-            255 * (mask_name_timer / MASK_NAME_FADE)
-        )
 
-        text_surface = font.render(mask_name, True, (230, 230, 230))
-        text_surface.set_alpha(alpha)
+        # --- DRAW MAP ---
+        screen.fill((20, 20, 20))
+        for r, row in enumerate(game_map):
+            for c, char in enumerate(row):
+                x = c * TILE_SIZE - camera_x
+                y = r * TILE_SIZE - camera_y
+                screen.blit(floor_tile, (x, y))
+                if char == "W":
+                    screen.blit(wall_tile, (x, y))
 
-        text_rect = text_surface.get_rect(
-            midbottom=(wheel_rect.centerx, wheel_rect.top + 200)
-        )
-        screen.blit(text_surface, text_rect)
+        if player.dead:
+            overlay = pygame.Surface((WIDTH, HEIGHT))
+            overlay.fill((0, 0, 0, 160))
+            overlay.set_alpha(180)
+            screen.blit(overlay, (0, 0))
 
-    center_x = WIDTH // 2
-    center_y = BOTTOM_Y
+            text = death_font.render("YOU DIED", True, (200, 0, 0))
+            subtext = font.render(f"     press R to respawn", True, (200, 200, 200))
+            subtext2 = font.render(f"            Score: {score}", True, (200, 200, 0))
+            rect = text.get_rect(center=(WIDTH // 2, (HEIGHT // 2)-80))
+            rect2 = text.get_rect(center=(WIDTH // 2, (HEIGHT // 2)+10))
+            rect3 = text.get_rect(center=(WIDTH // 2, (HEIGHT // 2)+40))
 
-    for i, name in enumerate(mask_order):
-        relative_pos = i - wheel_offset
-        if abs(relative_pos) > 1.5:
+            screen.blit(text, rect)
+            screen.blit(subtext, rect2)
+            screen.blit(subtext2, rect3)
+
+            mouse = pygame.mouse.get_pos()
+            hover = MENU_BTN_RECT.collidepoint(mouse)
+
+            bg = (150, 40, 40) if hover else (30, 30, 30)
+            pygame.draw.rect(screen, bg, MENU_BTN_RECT, border_radius=12)
+            pygame.draw.rect(screen, (200, 80, 80), MENU_BTN_RECT, 2, border_radius=12)
+
+            label = font.render("BACK TO MAIN MENU", True, (230, 230, 230))
+            screen.blit(label, label.get_rect(center=MENU_BTN_RECT.center))
+
+
+            pygame.display.flip()
             continue
 
-        angle = relative_pos * WHEEL_ARC
-        x = center_x + math.sin(angle) * WHEEL_RADIUS
-        y = center_y - math.cos(angle) * (WHEEL_RADIUS * 0.4) + 8
 
-        distance = abs(relative_pos)
-        t = max(0, 1 - distance) ** 2
+        player.draw(screen, (camera_x, camera_y))
 
-        size = int(ICON_SIZE + (CENTER_SIZE - ICON_SIZE) * t)
-        icon = pygame.transform.scale(mask_icons[name], (size, size))
+        # ⚠️ STUNNED TEXT
+        if player.stun_text_timer > 0 and player.current_mask == "garuda":
+            alpha = int(255 * min(1, player.stun_text_timer))
+            stun_text = font.render("stunned!", True, (255, 220, 0))
+            stun_text.set_alpha(alpha)
 
-        # 🎠 CAROUSEL ROTATION (exact behavior)
-        rotation = 0  
-        icon = pygame.transform.rotate(icon, rotation)
+            text_x = player.rect.centerx - camera_x
+            text_y = player.rect.top - camera_y - 45
 
-        alpha = int(80 + 175 * t)
-        icon.set_alpha(alpha)
-
-        rect = icon.get_rect(center=(x, y))
-        screen.blit(icon, rect)
-    
-    if paused:
-        overlay = pygame.Surface((WIDTH, HEIGHT))
-        overlay.fill((0, 0, 0))
-        overlay.set_alpha(160)
-        screen.blit(overlay, (0, 0))
-
-        pause_text = death_font.render("PAUSED", True, (230, 230, 230))
-        rect = pause_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-        screen.blit(pause_text, rect)
-
-        hint = font.render("Press ESC to resume", True, (180, 180, 180))
-        hint_rect = hint.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
-        screen.blit(hint, hint_rect)
+            screen.blit(
+                stun_text,
+                stun_text.get_rect(center=(text_x, text_y))
+            )
 
 
+        if player.stunned and player.current_mask == "garuda":
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((150, 150, 255, 70))
+            screen.blit(overlay, (0, 0))
 
-    pygame.display.flip()
+        if player.current_mask == "kali" and player.charging:
+            player.draw_charge_sword(screen, (camera_x, camera_y))
+            if player.charge_sword_rect:
+                hitbox = player.charge_sword_rect.inflate(20, -100)
 
-pygame.quit()
-sys.exit()
+
+                for ghost in ghosts:
+                    if ghost.alive and hitbox.colliderect(ghost.rect):
+                        ghost.take_damage(40)
+
+                        if not player.dead and not ghost.alive and not hasattr(ghost, "scored"):
+                            score += 15
+                            ghost.scored = True
+
+                        ghost.apply_knockback(
+                            player.rect.centerx,
+                            player.rect.centery,
+                            22
+                        )
+
+
+
+                # 🔴 DEBUG (optional)
+                #pygame.draw.rect(
+                #    screen,
+                #    (255, 0, 0),
+                #    hitbox.move(-camera_x, -camera_y),
+                #    2
+                #)
+
+        for fireball in fireballs:
+            fireball.draw(screen, (camera_x, camera_y))
+
+
+        for g in ghosts:
+            g.draw(screen, (camera_x, camera_y))
+
+        # 🌑 KALI BLINDNESS EFFECT (FIXED)
+        if player.current_mask == "kali" and not player.dead:
+            blind_surface.fill((0, 0, 0, 220))  # darkness strength
+
+            px = player.rect.centerx - camera_x
+            py = player.rect.centery - camera_y
+
+            # Cut vision hole
+            pygame.draw.circle(
+                blind_surface,
+                (0, 0, 0, 0),
+                (int(px), int(py)),
+                BLIND_RADIUS
+            )
+
+            screen.blit(blind_surface, (0, 0))
+
+
+
+        # --- HEALTH BAR ---
+        bar_rect = player.health_bar.get_frame_rect()
+
+        cropped_rect = pygame.Rect(
+            bar_rect.x,
+            bar_rect.y + BAR_VISIBLE_Y,
+            BAR_WIDTH,
+            BAR_VISIBLE_H
+        )
+
+        frame = pygame.Surface((BAR_WIDTH, BAR_VISIBLE_H), pygame.SRCALPHA)
+        frame.blit(health_bar_img, (0, 0), cropped_rect)
+
+        UI_WIDTH, UI_HEIGHT = 260, 70
+        frame = pygame.transform.scale(frame, (UI_WIDTH, UI_HEIGHT))
+
+        x = (WIDTH - UI_WIDTH) // 2
+        y = 4
+        screen.blit(frame, (x, y))
+
+        # ❤️ HEALTH BAR DAMAGE POLISH
+        if player.health_flash_timer > 0:
+            t = player.health_flash_timer / player.health_flash_duration
+
+            # --- micro shake ---
+            shake_x = shake_y = 0
+            if player.health_shake_timer > 0:
+                shake_x = random.randint(-2, 2)
+                shake_y = random.randint(-1, 1)
+
+            # --- white impact flash (very short) ---
+            if t > 0.85:
+                flash = pygame.Surface((UI_WIDTH, UI_HEIGHT), pygame.SRCALPHA)
+                flash.fill((255, 255, 255, 180))
+                screen.blit(flash, (x + shake_x, y + shake_y))
+
+            # --- red pulse fade ---
+            red_alpha = int(140 * (t ** 2))
+            pulse = pygame.Surface((UI_WIDTH, UI_HEIGHT), pygame.SRCALPHA)
+            pulse.fill((255, 40, 40, red_alpha))
+            screen.blit(pulse, (x + shake_x, y + shake_y))
+
+
+
+        # --- MASK WHEEL ---
+        wheel_rect = wheel_image.get_rect(midbottom=(WIDTH // 2, HEIGHT))
+        #screen.blit(wheel_image, wheel_rect)
+        is_ready = player.mask_switch_cd <= 0
+
+        # Base hotbar
+        hotbar_base = hotbar_gold if is_ready else hotbar_normal
+        hotbar = hotbar_base.copy()
+
+        # Base opacity
+        hotbar.set_alpha(140 if not is_ready else 210)
+
+        hb_rect = hotbar.get_rect(
+            midbottom=wheel_rect.midbottom
+        )
+        screen.blit(hotbar, hb_rect)
+
+
+
+        if mask_name_timer > 0:
+            mask_name = player.current_mask
+            alpha = 255 if mask_name_timer > MASK_NAME_FADE else int(
+                255 * (mask_name_timer / MASK_NAME_FADE)
+            )
+
+            text_surface = font.render(mask_name, True, (230, 230, 230))
+            text_surface.set_alpha(alpha)
+
+            text_rect = text_surface.get_rect(
+                midbottom=(wheel_rect.centerx, wheel_rect.top + 200)
+            )
+            screen.blit(text_surface, text_rect)
+
+        center_x = WIDTH // 2
+        center_y = BOTTOM_Y
+
+        for i, name in enumerate(mask_order):
+            relative_pos = i - wheel_offset
+            if abs(relative_pos) > 1.5:
+                continue
+
+            angle = relative_pos * WHEEL_ARC
+            x = center_x + math.sin(angle) * WHEEL_RADIUS
+            y = center_y - math.cos(angle) * (WHEEL_RADIUS * 0.4) + 8
+
+            distance = abs(relative_pos)
+            t = max(0, 1 - distance) ** 2
+
+            size = int(ICON_SIZE + (CENTER_SIZE - ICON_SIZE) * t)
+            icon = pygame.transform.scale(mask_icons[name], (size, size))
+
+            # 🎠 CAROUSEL ROTATION (exact behavior)
+            rotation = 0  
+            icon = pygame.transform.rotate(icon, rotation)
+
+            alpha = int(80 + 175 * t)
+            icon.set_alpha(alpha)
+
+            rect = icon.get_rect(center=(x, y))
+            screen.blit(icon, rect)
+        
+        if paused:
+            overlay = pygame.Surface((WIDTH, HEIGHT))
+            overlay.fill((0, 0, 0))
+            overlay.set_alpha(160)
+            screen.blit(overlay, (0, 0))
+
+            pause_text = death_font.render("PAUSED", True, (230, 230, 230))
+            rect = pause_text.get_rect(center=(WIDTH // 2, (HEIGHT // 2)-50))
+            screen.blit(pause_text, rect)
+
+            hint = font.render("Press ESC to resume", True, (180, 180, 180))
+            hint_rect = hint.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 10))
+            screen.blit(hint, hint_rect)
+
+            mouse = pygame.mouse.get_pos()
+            hover = MENU_BTN_RECT.collidepoint(mouse)
+
+            bg = (150, 40, 40) if hover else (30, 30, 30)
+            pygame.draw.rect(screen, bg, MENU_BTN_RECT, border_radius=12)
+            pygame.draw.rect(screen, (200, 80, 80), MENU_BTN_RECT, 2, border_radius=12)
+
+            label = font.render("BACK TO MAIN MENU", True, (230, 230, 230))
+            screen.blit(label, label.get_rect(center=MENU_BTN_RECT.center))
+
+        # --- SCORE UI (always visible) ---
+        score_text = font.render(f"SCORE: {score}", True, (240, 240, 240))
+        screen.blit(score_text, (WIDTH - score_text.get_width() - 20, 12))
+
+
+
+        pygame.display.flip()
+    from menu import save_high_score
+    save_high_score(score)
+
+    return score, return_to_menu
+
+if __name__ == "__main__":
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    run_game(screen)
