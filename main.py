@@ -6,6 +6,9 @@ from ghost1 import Ghost
 from maps.castle import load_castle, SpriteSheet, TILE_SIZE
 import random
 
+from info_cards import InfoCards
+
+
 
 # Initialize pygame
 
@@ -20,6 +23,11 @@ def run_game(screen):
 
     font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 25)
     death_font = pygame.font.Font("assets/fonts/MinecraftRegular-Bmg3.otf", 80)
+
+    info_cards = InfoCards(screen)
+
+
+
 
     BLIND_RADIUS = 240    # visible area around Kali
     BLIND_SOFTNESS = 120   # edge smoothness
@@ -150,6 +158,15 @@ def run_game(screen):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if info_cards.active:
+                info_cards.handle_event(event)
+            if paused:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_DOWN:
+                        info_cards.open()
+            
+
+
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if (paused or player.dead) and MENU_BTN_RECT.collidepoint(event.pos):
@@ -159,6 +176,7 @@ def run_game(screen):
 
 
             if event.type == pygame.KEYDOWN:
+
 
                 can_switch = player.mask_switch_cd <= 0  # gold hotbar
                 if event.key == pygame.K_1 and can_switch:
@@ -561,6 +579,14 @@ def run_game(screen):
 
             label = font.render("BACK TO MAIN MENU", True, (230, 230, 230))
             screen.blit(label, label.get_rect(center=MENU_BTN_RECT.center))
+
+            arrow_text = death_font.render(">", True, (230, 230, 230))
+            arrow_text = pygame.transform.rotate(arrow_text, -90)
+            arrow_rect = arrow_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 180))
+            screen.blit(arrow_text, arrow_rect)
+
+        
+        info_cards.draw()
 
         # --- SCORE UI (always visible) ---
         score_text = font.render(f"SCORE: {score}", True, (240, 240, 240))
